@@ -102,6 +102,28 @@ https://github.com/createjy/dsh-plugin-update-entry/releases/download/v1.0.1/dsh
 
 类名前缀是构建产物，随时可能再变；`test/dom.test.mjs` 会带两套前缀各跑一遍卡片渲染，改名时不会静默失效。
 
+## 市场收录状态
+
+截至 **2026-11-15**，本插件还没出现在 dshmarket 的插件市场目录里。三条实证（同一次运行得出）：
+
+| 检查项 | 结果 |
+| --- | --- |
+| GitHub 仓库 topic | ✅ 已就绪：`topics` 含 `dsh-plugin`（`hasDshPluginTopic: true`，`ageDays: 2`） |
+| 目录条目（`registry entry`） | ❌ `entry: null` —— 官方目录 `plugins.json` 与 dsh.market 里都还没有 `createjy/dsh-plugin-update-entry`，上游 `data/plugins/<owner>__<repo>.yml` 返回 404 |
+| 详情页 | ❌ HTTP 404 —— `https://awesome-dsh-plugin.com/p/createjy/dsh-plugin-update-entry/` |
+
+原因不是仓库不合格，而是**改名还没走完**：GitHub 账号从 `creatjy` 改成 `createjy` 后，上游主分支里的条目文件仍是旧名 `data/plugins/creatjy__dsh-plugin-update-entry.yml`（该文件现在仍返回 200），官方目录里那条记录也还是 `url: https://github.com/creatjy/dsh-plugin-update-entry`、`npm: null`、`version: null`。改名 PR 已在 fork `createjy/awesome-dsh-plugin` 的分支 `rename/createjy-update-entry` 上备好（提交 `fb276f9`），等它合并进上游、再等一夜的目录构建，市场里才会出现新地址。
+
+**先不要重复提交上架申请**——旧条目已经在目录里，再提交一份会变成两条重复记录。等旧文件被改名 PR 替换即可。
+
+复查命令（每次都看这一条的输出，别靠印象）：
+
+```
+node ~/.dsh/lazy-toolbox/skills/dsh-plugin-open-source/scripts/check-listing.mjs createjy/dsh-plugin-update-entry --json --timeout 25000
+```
+
+判定口径（按脚本自己的状态机读，别凭感觉）：`entryFile.status` 还是 404 → `stage: not-submitted`，说明改名 PR 未合；变成 200 但 `officialCatalog.entry` 与 `awesomeJson.entry` 都还是 `null` → `stage: pending-build`，说明已合但目录没重建（通常一天内）；任一 `entry` 非空 → `stage: listed`，此时再确认 `page.status` 为 200。
+
 ## 边界与取舍
 
 | 情况 | 行为 |
