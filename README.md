@@ -226,15 +226,15 @@ npm test        # 22 条纯函数 + 10 条 DOM/脚本回归 + 2 条 engines 边�
 
 单独跑某一条：`node test/harness/harness-fetch.mjs`。缺 devDependencies 时这些会跳过，纯函数照跑。
 
+调试：`localStorage.pueDebug = '1'` 后重新打开浮层，头部会显示构建号，失败信息里会附带每一层的解析结果与原始错误。
+
 ### 发版
 
-推 `v*` tag 即由 `.github/workflows/release.yml` 发布到 npm，走 **Trusted Publishing（OIDC）**：工作流只申请 `id-token: write`，npm 用 GitHub 签发的短期 OIDC token 换发布凭据，仓库里不需要也不应该放 `NPM_TOKEN`。包本身开了 2FA 的账号也能这么发，附带 provenance 证明。
+推 `v*` tag 即由 `.github/workflows/release.yml` 发布到 npm，走 **Trusted Publishing（OIDC）**：工作流只申请 `id-token: write`，npm 用 GitHub 签发的短期 OIDC token 换发布凭据，仓库里不需要也不应该放 `NPM_TOKEN`。账号开了 2FA 也能这么发，并且会自动带 provenance 证明。
 
 ```
 git tag v1.0.3 && git push origin v1.0.3
 ```
-
-调试：`localStorage.pueDebug = '1'` 后重新打开浮层，头部会显示构建号，失败信息里会附带每一层的解析结果与原始错误。
 
 ## 许可
 
