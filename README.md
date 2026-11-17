@@ -84,7 +84,7 @@ dsh-plugin-update-entry
 也可以直接装 Release 里附带的 `npm pack` 产物（与 npm 上的 tarball 是同一份字节）：
 
 ```
-https://github.com/createjy/dsh-plugin-update-entry/releases/download/v1.0.1/dsh-plugin-update-entry-1.0.1.tgz
+https://github.com/createjy/dsh-plugin-update-entry/releases/download/v1.0.2/dsh-plugin-update-entry-1.0.2.tgz
 ```
 
 装好后插件页会多出一行「插件更新入口」，默认启用。它自己也是一个普通组合包，可以随时关掉——关掉后注入的按钮和浮层会一并移除，页面回到原样。
@@ -107,11 +107,11 @@ rc.3 把 `updatable` 改成了 `update`，只保留旧判断会让一键更新�
 
 ## 市场收录状态
 
-截至 **2026-11-15**，本插件还没出现在 dshmarket 的插件市场目录里。三条实证（同一次运行得出）：
+截至 **2026-11-17**，本插件还没出现在 dshmarket 的插件市场目录里。三条实证（同一次运行得出）：
 
 | 检查项 | 结果 |
 | --- | --- |
-| GitHub 仓库 topic | ✅ 已就绪：`topics` 含 `dsh-plugin`（`hasDshPluginTopic: true`，`ageDays: 2`） |
+| GitHub 仓库 topic | ✅ 已就绪：`topics` 含 `dsh-plugin`（`hasDshPluginTopic: true`，`ageDays: 5`） |
 | 目录条目（`registry entry`） | ❌ `entry: null` —— 官方目录 `plugins.json` 与 dsh.market 里都还没有 `createjy/dsh-plugin-update-entry`，上游 `data/plugins/<owner>__<repo>.yml` 返回 404 |
 | 详情页 | ❌ HTTP 404 —— `https://awesome-dsh-plugin.com/p/createjy/dsh-plugin-update-entry/` |
 

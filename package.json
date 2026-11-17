@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-update-entry",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Update entry before each DSH plugin card switch: pick a version and read its release notes without opening the detail page.",
   "type": "module",
   "main": "index.js",
