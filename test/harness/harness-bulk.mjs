@@ -177,7 +177,12 @@ console.log('6 retarget', [...document.querySelectorAll('.pue-bulk-pick')].map((
 // the note disappearing (a refresh) must not kill the panel
 note.remove()
 await tick(200)
-console.log('7 noteGone button', !!document.querySelector('.pue-all'), 'panel', !!document.querySelector('.pue-panel'))
+/* The note is gone for the whole duration of an official refresh; the fast
+ * path must stay clickable through it. */
+const survivor = document.querySelector('.pue-all')
+console.log('7 noteGone button', !!survivor, 'panel', !!document.querySelector('.pue-panel'),
+  'inToolbar', !!document.querySelector('[data-plugin-toolbar] > .pue-all'),
+  'count', survivor?.querySelector('.pue-all-count')?.textContent)
 
 const runButton = [...document.querySelectorAll('.pue-panel button')].find((b) => /^更新 \d+ 个$/.test(b.textContent.trim()))
 console.log('8 runButton', runButton?.textContent.trim(), 'disabled', runButton?.disabled)

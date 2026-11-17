@@ -436,6 +436,10 @@
   .pue-all:focus-visible{outline:var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color);outline-offset:1px}
   .pue-all:disabled{color:var(--dsw-alias-label-tertiary);cursor:default;background:var(--dsw-alias-bg-layer-2)}
   .pue-all[aria-expanded="true"]{background:var(--dsw-alias-interactive-bg-active);color:var(--dsw-alias-label-primary)}
+  .pue-all-count{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-tertiary)}
+  .pue-all[aria-expanded="true"] .pue-all-count{color:var(--dsw-alias-label-secondary)}
+  .pue-all .pue-spin{display:inline-block}
+  .pue-all .pue-spin[hidden]{display:none}
   .pue-panel{position:fixed;z-index:60;box-sizing:border-box;display:flex;flex-direction:column;width:min(440px,calc(100vw - 24px));max-height:min(540px,calc(100vh - 24px));background:var(--dsw-alias-bg-layer-3);border:1px solid var(--dsw-alias-border-l2);border-radius:var(--dsw-radius-lg);box-shadow:var(--dsw-shadow-lv3);color:var(--dsw-alias-label-primary);animation:pue-in .12s ease-out}
   .pue-panel-body{min-height:0;display:flex;flex-direction:column;overflow:auto}
   .pue-bulk{list-style:none;margin:0;padding:2px 6px 8px;display:flex;flex-direction:column;gap:2px}
@@ -1819,27 +1823,40 @@
         /* ---- bulk update: the toolbar's "N plugins can be updated" button ---- */
 
         /* The official note is React state: it exists only while every check has
-         * finished, so pressing Refresh makes it vanish. The button therefore has
-         * to come and go with the note instead of being mounted once, exactly
-         * like the per-card buttons. Losing the note must never abandon a run
+         * finished, so pressing Refresh makes it vanish for minutes. The button
+         * must not vanish with it — it is the fast path that skips the official
+         * serial check — so it hangs off the toolbar and merely prefers to sit
+         * after the note when one is there. Only losing the toolbar itself (a
+         * different tab) unmounts it. Losing the note must never abandon a run
          * that is already in flight. */
         function ensureBulkButton() {
           const toolbar = document.querySelector(SEL.toolbar);
-          const note = toolbar ? toolbar.querySelector(SEL.note) : null;
-          if (!note) {
+          if (!toolbar) {
             if (bulk.button && bulk.button.isConnected) bulk.button.remove();
             bulk.button = null;
-            bulk.anchor = toolbar || null;
-            if (!toolbar && bulk.phase !== 'running') closeBulk();
-            else if (bulk.open) positionBulk();
+            bulk.anchor = null;
+            if (bulk.phase !== 'running') closeBulk();
             return;
           }
+          const note = toolbar.querySelector(SEL.note);
           if (bulk.button && bulk.button.isConnected) {
-            if (bulk.button.previousElementSibling !== note) note.after(bulk.button);
-            bulk.anchor = note;
+            const wantBefore = note ? null : toolbar.firstElementChild;
+            const placed = note
+              ? bulk.button.previousElementSibling === note
+              : toolbar.contains(bulk.button);
+            if (!placed) {
+              if (note) note.after(bulk.button);
+              else if (wantBefore && wantBefore !== bulk.button) toolbar.insertBefore(bulk.button, wantBefore);
+              else toolbar.insertBefore(bulk.button, toolbar.firstChild);
+            }
+            bulk.anchor = note || bulk.button;
             syncBulkButton();
             return;
           }
+          const label = el('span', { class: 'pue-all-text' }, t('all'));
+          const count = el('span', { class: 'pue-all-count' });
+          const spin = el('span', { class: 'pue-spin', 'aria-hidden': 'true' });
+          spin.hidden = true;
           const button = el('button', {
             class: 'pue-all',
             type: 'button',
@@ -1853,10 +1870,11 @@
               if (bulk.open) closeBulk({ restoreFocus: true });
               else openBulk();
             },
-          }, t('all'));
-          note.after(button);
+          }, spin, label, count);
+          if (note) note.after(button);
+          else toolbar.insertBefore(button, toolbar.firstChild);
           bulk.button = button;
-          bulk.anchor = note;
+          bulk.anchor = note || button;
           syncBulkButton();
         }
 
@@ -1864,6 +1882,24 @@
           if (!bulk.button) return;
           bulk.button.disabled = bulk.phase === 'running';
           bulk.button.setAttribute('aria-expanded', bulk.open ? 'true' : 'false');
+          const spin = bulk.button.querySelector('.pue-spin');
+          const count = bulk.button.querySelector('.pue-all-count');
+          const loading = bulk.phase === 'loading';
+          /* Only write when the value changes: this runs inside the observer's
+           * own scan, so an unconditional write would enqueue another scan and
+           * spin forever. */
+          if (spin && spin.hidden !== !loading) spin.hidden = !loading;
+          /* A count on the button keeps the total visible even when the official
+           * note is gone for the whole duration of a refresh. */
+          if (count) {
+            /* Count what the panel actually lists: a package whose registry
+             * answer held no versions is hidden, so including it here would
+             * advertise a number the user cannot find. */
+            const total = bulkRows(bulk.items).length;
+            const text = !loading && total > 0 ? String(total) : '';
+            if (count.textContent !== text) count.textContent = text;
+            if (count.hidden !== (text === '')) count.hidden = text === '';
+          }
         }
 
         function openBulk() {

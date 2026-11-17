@@ -70,7 +70,9 @@ test('dom: the toolbar offers one-click updates for every updatable plugin', { s
   assert.match(output, /5b reopened 0\.9\.43发布于/);
   assert.match(output, /5c survived true 0\.9\.43发布于.* pinned 0\.9\.43/);
   assert.match(output, /6 retarget \[ '0\.9\.42', '0\.2\.100', '选择版本' \]/);
-  assert.match(output, /7 noteGone button false panel true/);
+  /* Pressing Refresh hides the official note for minutes. The one-click entry
+   * is the fast path that skips that serial check, so it must survive. */
+  assert.match(output, /7 noteGone button true panel true inToolbar true count 3/);
   assert.match(output, /\["updateBundle","dsh-free-search","0\.9\.42"\],\["updateBundle","dsh-mcp-connector","0\.2\.100"\]/);
   assert.match(output, /9b foot 2 个已更新，0 个失败/);
   assert.match(output, /9d panelAlive true/);
@@ -106,6 +108,27 @@ test('dom: the bulk panel hides up-to-date rows and retries unread ones', { skip
   assert.match(output, /4c states \["dsh-dead:已跳过","dsh-flaky:2\.6\.4"\]/);
   assert.match(output, /4d foot 1 个已更新，0 个失败 · 1 个已跳过/);
   assert.match(output, /4e opsHidden true/);
+});
+
+/**
+ * The official "N plugins can be updated" note only exists once every
+ * background check finished, so pressing Refresh hides it for minutes. The
+ * one-click entry is the fast path that skips that serial check, so it has to
+ * survive the note being gone — otherwise the only way to reach it is to wait
+ * for the slow refresh it was built to avoid.
+ */
+test('dom: the one-click entry stays on the toolbar without the official note', { skip: noJsdom || noCordis }, () => {
+  const output = run('harness-bulk-nonote.mjs');
+  assert.match(output, /1 mounted true inToolbar true noteAbsent true/);
+  /* Two registry rows, one of them answered with no versions: one row shows,
+   * and the button advertises that same number rather than the raw count. */
+  assert.match(output, /2 rows \["dsh-free-search"\]/);
+  assert.match(output, /2b gitHidden true/);
+  assert.match(output, /2c count 1 hidden false/);
+  /* The note returning must reorder the button after it, never duplicate it. */
+  assert.match(output, /3 afterNote true oneButton 1/);
+  /* Leaving the tab takes the toolbar; the button and panel go with it. */
+  assert.match(output, /4 noToolbar true panelClosed true/);
 });
 
 /**
