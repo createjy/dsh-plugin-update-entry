@@ -91,14 +91,17 @@ https://github.com/createjy/dsh-plugin-update-entry/releases/download/v1.0.1/dsh
 
 **要求**：DSH 桌面端或 Web 端（Client 侧插件）。插件本身没有 Host 逻辑，不需要重启后端。
 
-**兼容版本**：`engines.dsh = ^0.2.2-rc.1`（等价 `>=0.2.2-rc.1 <0.3.0`）。已在 0.2.2-rc.1（桌面端实机）和 0.2.2-rc.2 上核对过下面四个依赖面：
+**兼容版本**：`engines.dsh = ^0.2.2-rc.1`（等价 `>=0.2.2-rc.1 <0.3.0`）。已在 0.2.2-rc.1（桌面端实机）、0.2.2-rc.2、0.2.2-rc.3 上核对过下面几个依赖面：
 
-| 依赖面 | 0.2.2-rc.1 | 0.2.2-rc.2 |
-| --- | --- | --- |
-| 卡片锚点 `data-plugin-package` / `cardEnd` / `bundleToggle` / `statusTag` | ✅ | ✅ 全部保留 |
-| CSS module 类名前缀 | `w6M7KW_` | `X_2TxG_`（插件只匹配子串，不受影响） |
-| `listVersions` / `updateBundle` 的远端参数 | `(name, options)` / `(name, version, options)` | 相同 |
-| 模块加载契约 `__ModuleLoader__.load({ id, factory })` | ✅ | ✅ |
+| 依赖面 | 0.2.2-rc.1 | 0.2.2-rc.2 | 0.2.2-rc.3 |
+| --- | --- | --- | --- |
+| 卡片锚点 `data-plugin-package` / `cardEnd` / `bundleToggle` / `statusTag` | ✅ | ✅ 全部保留 | ✅ 全部保留 |
+| CSS module 类名前缀 | `w6M7KW_` | `X_2TxG_`（插件只匹配子串，不受影响） | 相同策略 |
+| `listVersions` / `updateBundle` 的远端参数 | `(name, options)` / `(name, version, options)` | 相同 | 相同 |
+| `listBundles` 的「可更新」字段 | `updatable: true` | `updatable: true` | **`update: 'registry' \| 'git'`**（不可更新则无字段） |
+| 模块加载契约 `__ModuleLoader__.load({ id, factory })` | ✅ | ✅ | ✅ |
+
+rc.3 把 `updatable` 改成了 `update`，只保留旧判断会让一键更新面板把所有包过滤掉、误报「全部插件已是最新版本」。`updatableBundles()` 同时读两种形状（新字段优先、旧字段回退），`test/pure.test.mjs` 各有一条用例。
 
 类名前缀是构建产物，随时可能再变；`test/dom.test.mjs` 会带两套前缀各跑一遍卡片渲染，改名时不会静默失效。
 
@@ -204,7 +207,7 @@ test/harness/         jsdom harness：服务层 / connection.rpc / 仅 fetch / �
 
 ```sh
 npm install     # 只装 devDependencies：jsdom + @deepseek-ai/cordis + semver
-npm test        # 22 条纯函数 + 8 条 DOM/脚本回归 + 2 条 engines 边界
+npm test        # 23 条纯函数 + 8 条 DOM/脚本回归 + 2 条 engines 边界
 ```
 
 `npm test` 不需要 DSH 在跑。八条 DOM 回归分别在 jsdom 里还原官方卡片与工具栏结构，覆盖插件在浏览器里可能遇到的传输形态：

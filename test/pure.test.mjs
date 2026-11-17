@@ -233,6 +233,26 @@ test('updatableBundles keeps only installed packages that offer an update', () =
   assert.deepEqual(pure.updatableBundles([]), []);
 });
 
+test('updatableBundles reads the rc.3 update field and still honours the rc.1 one', () => {
+  /* DSH 0.2.2-rc.3 replaced `updatable: true` with `update: 'registry' | 'git'`,
+   * and omits the field entirely for a bundle it cannot update. Reading only
+   * the old name hid every row and made the panel claim "all up to date". */
+  const rc3 = [
+    { name: 'registry-one', installed: true, update: 'registry', version: '1.2.0' },
+    { name: 'git-one', installed: true, update: 'git', version: '2.0.0' },
+    { name: 'not-updatable', installed: true, version: '3.0.0' },
+    { name: 'not-installed', installed: false, update: 'registry', version: '4.0.0' },
+  ];
+  assert.deepEqual(pure.updatableBundles(rc3), [{ name: 'registry-one', from: '1.2.0' }]);
+
+  /* An older Host sends the old shape and no `update` field at all. */
+  const rc1 = [
+    { name: 'legacy-yes', installed: true, updatable: true, version: '1.0.0' },
+    { name: 'legacy-no', installed: true, updatable: false, version: '2.0.0' },
+  ];
+  assert.deepEqual(pure.updatableBundles(rc1), [{ name: 'legacy-yes', from: '1.0.0' }]);
+});
+
 test('bulkSummary counts finished, failed, skipped and untouched items', () => {
   assert.deepEqual(pure.bulkSummary([
     { state: 'done' }, { state: 'failed' }, { state: 'idle' }, { state: 'skipped' },

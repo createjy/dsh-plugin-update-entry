@@ -198,17 +198,28 @@
   }
 
   /**
-   * The bundles worth listing: installed, updatable, and actually a bundle.
-   * `listBundles` reports both profile and installation packages; only the
-   * installed ones can be updated from here, and `official` packages are the
-   * Host's own and never appear as updatable.
+   * The bundles worth listing: installed, and updatable from a registry.
+   *
+   * DSH renamed the field in 0.2.2-rc.3: rc.1/rc.2 said `updatable: true`, and
+   * rc.3 says `update: 'registry' | 'git'` instead — a bundle it cannot update
+   * carries no such field at all. Reading only the old name made every row
+   * disappear and the panel claim everything was up to date.
+   *
+   * `git` is deliberately excluded. The official page counts and lists only
+   * `update === 'registry'`, and `listVersions` refuses a Git install with
+   * "installed from Git, which lists no versions", so including it would add a
+   * row that can never succeed.
    */
   function updatableBundles(bundles) {
     const list = Array.isArray(bundles) ? bundles : [];
     const out = [];
     for (const bundle of list) {
       if (!bundle || typeof bundle.name !== 'string') continue;
-      if (!bundle.installed || !bundle.updatable) continue;
+      if (!bundle.installed) continue;
+      const fromRegistry = bundle.update === 'registry';
+      /* rc.1/rc.2 shape, kept so an older Host still lists its rows. */
+      const legacy = bundle.update === undefined && bundle.updatable === true;
+      if (!fromRegistry && !legacy) continue;
       out.push({ name: bundle.name, from: String(bundle.version || '') });
     }
     out.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
@@ -244,11 +255,12 @@
     return out;
   }
 
-  /** The rows the panel shows. `listBundles` calls a package updatable when it
-   * *could* be updated, not when a newer version exists, so a listed answer
-   * with no versions at all means "nothing newer" — that row is hidden instead
-   * of being reported as up to date. A row whose versions exist but none can be
-   * installed here stays visible: it carries information the user needs. */
+  /** The rows the panel shows. A package is marked updatable when it *could*
+   * be updated (installed from a registry under its own name), not when a newer
+   * version exists, so a listed answer with no versions at all means "nothing
+   * newer" — that row is hidden instead of being reported as up to date. A row
+   * whose versions exist but none can be installed here stays visible: it
+   * carries information the user needs. */
   function bulkRows(items) {
     const out = [];
     for (const item of Array.isArray(items) ? items : []) {
