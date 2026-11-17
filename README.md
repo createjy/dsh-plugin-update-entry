@@ -207,7 +207,7 @@ test/harness/         jsdom harness：服务层 / connection.rpc / 仅 fetch / �
 
 ```sh
 npm install     # 只装 devDependencies：jsdom + @deepseek-ai/cordis + semver
-npm test        # 23 条纯函数 + 9 条 DOM/脚本回归 + 2 条 engines 边界
+npm test        # 22 条纯函数 + 9 条 DOM/脚本回归 + 2 条 engines 边界
 ```
 
 `npm test` 不需要 DSH 在跑。九条 DOM 回归分别在 jsdom 里还原官方卡片与工具栏结构，覆盖插件在浏览器里可能遇到的传输形态：
