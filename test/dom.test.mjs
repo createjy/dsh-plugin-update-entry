@@ -219,3 +219,21 @@ test('duplicate: a batch that embeds this bundle twice still loads', { skip: noJ
   assert.match(output, /3 unrelated duplicate threw true/);
   assert.match(output, /4 our id count 1/);
 });
+
+/**
+ * The official page asks `pluginInventory/list` first and refuses to manage
+ * plugins when the deployment has no manageable profile. Reading `listBundles`
+ * alone skips that gate, so the panel would offer updates the page cannot
+ * apply. This harness answers `managementAvailable: false`, asserts no bundle
+ * was even read, then flips it and proves the panel's retry lists normally.
+ */
+test('dom: the bulk panel respects the management gate', { skip: noJsdom || noCordis }, () => {
+  const output = run('harness-bulk-gate.mjs');
+  assert.match(output, /1 gate true rows 0/);
+  /* The gate must answer before any bundle is read: a panel that lists first
+   * and asks later has already promised something it cannot do. */
+  assert.match(output, /1b noBundlesRead true/);
+  assert.match(output, /1c retry 重新读取/);
+  assert.match(output, /2 listed \["dsh-free-search"\] gateGone true/);
+  assert.match(output, /2b count 1/);
+});

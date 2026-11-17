@@ -565,6 +565,9 @@
           allRetry: '重新读取',
           allStuck: '{count} 个版本尚未取到',
           allEmpty: '全部插件已是最新版本',
+          /* The Host refuses to manage plugins when it runs without a
+           * manageable profile; the official page says the same thing. */
+          allUnavailable: '本部署没有可管理的 profile，无法安装或启停插件。',
         },
         en: {
           entry: 'Update',
@@ -648,6 +651,7 @@
           allRetry: 'Read again',
           allStuck: '{count} not read yet',
           allEmpty: 'Everything is up to date',
+          allUnavailable: 'This deployment runs without a manageable profile, so plugins cannot be installed or switched here.',
         },
       };
 
@@ -1982,6 +1986,57 @@
           return answer;
         }
 
+        /* The official page asks `pluginInventory/list` before it manages
+         * anything and shows "unavailable" when the Host answers that this
+         * deployment runs without a manageable profile. Reading `listBundles`
+         * alone skips that gate, so the panel would list updates the page
+         * cannot apply. Ask the same question first; a read that fails
+         * entirely must not block, since then we simply do not know. */
+        async function inventoryAvailable() {
+          const probes = [];
+          const inventory = readService(ctx, 'remote.pluginInventory');
+          if (inventory && typeof inventory.list === 'function') probes.push(() => inventory.list());
+          const connection = readService(ctx, 'connection');
+          if (connection && connection.rpc && typeof connection.rpc.call === 'function') {
+            probes.push(() => connection.rpc.call('/api', 'pluginInventory/list', { args: {} }));
+          }
+          const send = typeof globalThis.fetch === 'function' ? globalThis.fetch : undefined;
+          if (send) {
+            probes.push(async () => {
+              const rpcId = makeRequestId();
+              const response = await send('/api/pluginInventory/list', {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                  type: 'client-request',
+                  rpcId,
+                  method: 'pluginInventory/list',
+                  payload: { args: {} },
+                }),
+              });
+              if (!response || !response.ok) throw new Error(`pluginInventory: HTTP ${response ? response.status : 'no response'}`);
+              const envelope = await response.json();
+              if (!envelope || typeof envelope !== 'object' || !envelope.result) {
+                throw new Error('pluginInventory: malformed response envelope');
+              }
+              return envelope.result;
+            });
+          }
+          for (const probe of probes) {
+            try {
+              const answer = unwrapAnswer(await probe());
+              const value = answer && answer.value ? answer.value : answer;
+              if (value && typeof value === 'object' && 'managementAvailable' in value) {
+                return value.managementAvailable === true;
+              }
+            } catch (error) {
+              warn('pluginInventory/list', error);
+            }
+          }
+          return true;
+        }
+
         async function loadBulk() {
           bulk.phase = 'loading';
           bulk.error = '';
@@ -1989,6 +2044,13 @@
           bulk.expanded = null;
           renderBulk();
           try {
+            if (!(await inventoryAvailable())) {
+              if (disposed) return;
+              bulk.phase = 'unavailable';
+              renderBulk();
+              syncBulkButton();
+              return;
+            }
             const bundles = unwrapAnswer(await viaTiers('listBundles', []));
             bulk.items = updatableBundles(bundles).map((bundle) => ({
               name: bundle.name,
@@ -2094,6 +2156,15 @@
           if (bulk.phase === 'error') {
             return [el('div', { class: 'pue-panel-empty' },
               el('div', {}, bulk.error || t('network')),
+              el('div', {}, el('button', {
+                class: 'pue-ghost',
+                type: 'button',
+                onclick: () => loadBulk(),
+              }, t('allRetry'))))];
+          }
+          if (bulk.phase === 'unavailable') {
+            return [el('div', { class: 'pue-panel-empty' },
+              el('div', {}, t('allUnavailable')),
               el('div', {}, el('button', {
                 class: 'pue-ghost',
                 type: 'button',

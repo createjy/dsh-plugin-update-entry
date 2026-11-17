@@ -207,10 +207,10 @@ test/harness/         jsdom harness：服务层 / connection.rpc / 仅 fetch / �
 
 ```sh
 npm install     # 只装 devDependencies：jsdom + @deepseek-ai/cordis + semver
-npm test        # 22 条纯函数 + 9 条 DOM/脚本回归 + 2 条 engines 边界
+npm test        # 22 条纯函数 + 10 条 DOM/脚本回归 + 2 条 engines 边界
 ```
 
-`npm test` 不需要 DSH 在跑。九条 DOM 回归分别在 jsdom 里还原官方卡片与工具栏结构，覆盖插件在浏览器里可能遇到的传输形态：
+`npm test` 不需要 DSH 在跑。十条 DOM 回归分别在 jsdom 里还原官方卡片与工具栏结构，覆盖插件在浏览器里可能遇到的传输形态：
 
 | harness | 上下文 | 证明什么 |
 | --- | --- | --- |
@@ -222,6 +222,7 @@ npm test        # 22 条纯函数 + 9 条 DOM/脚本回归 + 2 条 engines 边�
 | `harness-bulk-retry.mjs` | jsdom，版本检查连续失败两次 | 失败下标成「重试」而不是「正在检查更新」；展开会重新查询（与卡片一致）；行内的「重试」能恢复并进入更新流程 |
 | `harness-bulk-filters.mjs` | jsdom，注册表返回空版本 / 版本读取失败 | 空版本的行被隐藏而不是标「已是最新版本」；读取失败的行不阻断「更新 N 个」，运行时先补读、仍失败才记为已跳过并汇总 |
 | `harness-bulk-nonote.mjs` | jsdom，工具栏里没有官方提示节点 | 一键更新按钮照常挂在工具栏（官方刷新期间提示节点会消失几分钟）；按钮上的数字等于实际可见行数；提示节点回来时按钮排到它后面且不会重复；离开插件页时按钮与面板一起移除 |
+| `harness-bulk-gate.mjs` | jsdom，`managementAvailable: false` | 先问 `pluginInventory/list` 再读列表；无可用 profile 时显示只读提示与「重新读取」，一个 `listBundles` 都不发；翻转后同一次重试能正常列出 |
 
 单独跑某一条：`node test/harness/harness-fetch.mjs`。缺 devDependencies 时这些会跳过，纯函数照跑。
 
