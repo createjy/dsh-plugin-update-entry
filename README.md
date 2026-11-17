@@ -107,17 +107,17 @@ rc.3 把 `updatable` 改成了 `update`，只保留旧判断会让一键更新�
 
 ## 市场收录状态
 
-截至 **2026-11-17**，本插件还没出现在 dshmarket 的插件市场目录里。三条实证（同一次运行得出）：
+截至 **2026-11-18**，本插件已收录进市场目录，`npm` 上也有 `1.0.2` 了。同一次复查的输出：
 
 | 检查项 | 结果 |
 | --- | --- |
-| GitHub 仓库 topic | ✅ 已就绪：`topics` 含 `dsh-plugin`（`hasDshPluginTopic: true`，`ageDays: 5`） |
-| 目录条目（`registry entry`） | ❌ `entry: null` —— 官方目录 `plugins.json` 与 dsh.market 里都还没有 `createjy/dsh-plugin-update-entry`，上游 `data/plugins/<owner>__<repo>.yml` 返回 404 |
-| 详情页 | ❌ HTTP 404 —— `https://awesome-dsh-plugin.com/p/createjy/dsh-plugin-update-entry/` |
+| GitHub 仓库 topic | ✅ `topics` 含 `dsh-plugin`（`hasDshPluginTopic: true`，`ageDays: 5`） |
+| 目录条目（`registry entry`） | ✅ `data/plugins/createjy__dsh-plugin-update-entry.yml` 返回 200（旧的 `creatjy__` 那份已被改名 PR 替换） |
+| 市场索引 | ✅ `dshMarket.entry` 有 `createjy/dsh-plugin-update-entry`，`category: ui`，`tarball` 指向 `releases/latest/download/dsh-plugin-update-entry.tgz` |
+| 详情页 | ✅ 200 —— `https://awesome-dsh-plugin.com/p/createjy/dsh-plugin-update-entry/` |
+| 官方 Discover 索引 | ⏳ `officialCatalog.entry` 仍为 `null` —— 它只收带 npm 版本号的条目，等下一次目录构建 |
 
-原因不是仓库不合格，而是**改名还没走完**：GitHub 账号从 `creatjy` 改成 `createjy` 后，上游主分支里的条目文件仍是旧名 `data/plugins/creatjy__dsh-plugin-update-entry.yml`（该文件现在仍返回 200），官方目录里那条记录也还是 `url: https://github.com/creatjy/dsh-plugin-update-entry`、`npm: null`、`version: null`。改名 PR 已在 fork `createjy/awesome-dsh-plugin` 的分支 `rename/createjy-update-entry` 上备好（提交 `fb276f9`），等它合并进上游、再等一夜的目录构建，市场里才会出现新地址。
-
-**先不要重复提交上架申请**——旧条目已经在目录里，再提交一份会变成两条重复记录。等旧文件被改名 PR 替换即可。
+**先不要重复提交上架申请**——条目已经在目录里，再提交一份会变成两条重复记录。
 
 复查命令（每次都看这一条的输出，别靠印象）：
 
@@ -225,6 +225,14 @@ npm test        # 22 条纯函数 + 10 条 DOM/脚本回归 + 2 条 engines 边�
 | `harness-bulk-gate.mjs` | jsdom，`managementAvailable: false` | 先问 `pluginInventory/list` 再读列表；无可用 profile 时显示只读提示与「重新读取」，一个 `listBundles` 都不发；翻转后同一次重试能正常列出 |
 
 单独跑某一条：`node test/harness/harness-fetch.mjs`。缺 devDependencies 时这些会跳过，纯函数照跑。
+
+### 发版
+
+推 `v*` tag 即由 `.github/workflows/release.yml` 发布到 npm，走 **Trusted Publishing（OIDC）**：工作流只申请 `id-token: write`，npm 用 GitHub 签发的短期 OIDC token 换发布凭据，仓库里不需要也不应该放 `NPM_TOKEN`。包本身开了 2FA 的账号也能这么发，附带 provenance 证明。
+
+```
+git tag v1.0.3 && git push origin v1.0.3
+```
 
 调试：`localStorage.pueDebug = '1'` 后重新打开浮层，头部会显示构建号，失败信息里会附带每一层的解析结果与原始错误。
 
