@@ -1,0 +1,46 @@
+name: release
+
+# Publishes the package to npm through Trusted Publishing (OIDC).
+# No NPM_TOKEN secret is used or needed: npm exchanges the short-lived GitHub
+# OIDC token for a publish token, so a 2FA-protected account can publish from CI.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to publish (for example v1.0.2)'
+        required: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      # npm >= 11.5.1 is required for the OIDC token exchange.
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Show the versions we will publish with
+        run: node --version && npm --version
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Run the test suite
+        run: npm test
+
+      - name: Publish
+        run: npm publish --access public --provenance
