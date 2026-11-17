@@ -115,7 +115,7 @@ rc.3 把 `updatable` 改成了 `update`，只保留旧判断会让一键更新�
 | 目录条目（`registry entry`） | ✅ `data/plugins/createjy__dsh-plugin-update-entry.yml` 返回 200（旧的 `creatjy__` 那份已被改名 PR 替换） |
 | 市场索引 | ✅ `dshMarket.entry` 有 `createjy/dsh-plugin-update-entry`，`category: ui`，`tarball` 指向 `releases/latest/download/dsh-plugin-update-entry.tgz` |
 | 详情页 | ✅ 200 —— `https://awesome-dsh-plugin.com/p/createjy/dsh-plugin-update-entry/` |
-| 官方 Discover 索引 | ⏳ `officialCatalog.entry` 仍为 `null` —— 它只收带 npm 版本号的条目，等下一次目录构建 |
+| 官方 Discover 索引 | ⏳ `officialCatalog.entry` 仍为 `null` —— 它只收带 npm 版本号的条目。`1.0.2` 是 2026-11-17T23:32Z 发上 npm 的，而当时最新的目录构建是 `2026.1117.22685`（2026-11-17T06:09Z），下一次构建后才会出现 |
 
 **先不要重复提交上架申请**——条目已经在目录里，再提交一份会变成两条重复记录。
 
