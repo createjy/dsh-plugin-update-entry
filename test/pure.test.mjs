@@ -272,6 +272,18 @@ test('bulkRows hides a package whose registry answer held no versions', () => {
   assert.deepEqual(pure.bulkRows(undefined), []);
 });
 
+test('bulkTargets honours the unticked rows', () => {
+  const listed = (to, skip) => ({ phase: 'listed', state: 'idle', to, skip, list: { status: 'listed', versions: [{ version: to || '1.0.0' }] } });
+  assert.deepEqual(pure.bulkTargets([
+    { name: 'ticked', ...listed('2.0.0', false) },
+    { name: 'unticked', ...listed('2.0.0', true) },
+    { name: 'unread-ticked', phase: 'idle', state: 'idle', to: '', skip: false, list: null },
+    { name: 'unread-unticked', phase: 'idle', state: 'idle', to: '', skip: true, list: null },
+    { name: 'nothing-installable', ...listed('', false) },
+  ]).map((item) => item.name), ['ticked', 'unread-ticked']);
+  assert.deepEqual(pure.bulkTargets(undefined), []);
+});
+
 test('userMessage hides cordis transport internals from the page', () => {
   const raw = 'cannot get property "remote.pluginManager" without inject';
   const shown = pure.userMessage(new Error(raw));

@@ -255,3 +255,24 @@ test('dom: the bulk panel respects the management gate', { skip: noJsdom || noCo
   assert.match(output, /2 listed \["dsh-free-search"\] gateGone true/);
   assert.match(output, /2b count 1/);
 });
+
+/**
+ * Two things a run has to promise: unticked rows are left alone (partial
+ * updates), and stopping is honest — the install already sent cannot be
+ * recalled, so the panel says it is stopping, and one click on the toolbar
+ * entry afterwards starts a fresh check instead of only closing the result.
+ */
+test('dom: unticked rows are skipped and a stopped run can start again', { skip: noJsdom || noCordis }, () => {
+  const output = run('harness-bulk-stop.mjs');
+  assert.match(output, /1b boxes dsh-alpha:true dsh-beta:true dsh-gamma:true/);
+  assert.match(output, /2 untick 更新 2 个 skip true excluded true notExpanded true/);
+  assert.match(output, /2b deselectAll 更新 0 个 disabled true/);
+  assert.match(output, /3 selectAll 更新 3 个/);
+  assert.match(output, /4 running true stop 停止/);
+  /* The click has to change what is on screen: an unchanged footer is what made
+   * the stop button look dead while a multi-minute install ran. */
+  assert.match(output, /5 stop true disabled true label 正在停止/);
+  assert.match(output, /6 done dsh-alpha0\.1\.1 \| dsh-beta未勾选，已跳过 \| dsh-gamma已停止，未更新/);
+  assert.match(output, /6b updates \[\["updateBundle","dsh-alpha","0\.1\.1"\]\]/);
+  assert.match(output, /7 restart panel true reads 1->2/);
+});

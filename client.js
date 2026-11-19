@@ -41,7 +41,7 @@
    * Pure helpers (also exported for `node --test`, see `__pure` below)
    * ------------------------------------------------------------------ */
 
-  const BUILD = '1.0.3';
+  const BUILD = '1.0.4';
 
   /* Read a cordis service by its registration name, without the ctx proxy guard.
    *
@@ -244,11 +244,14 @@
 
   /** The rows a run will actually try: they have a target, or their version read
    * never landed and the run re-reads them first. A row that was read but offers
-   * nothing installable here stays visible yet is not attempted. */
+   * nothing installable here stays visible yet is not attempted. A row the user
+   * unticked stays visible and untried: partial updates are the point of the
+   * checkbox. */
   function bulkTargets(items) {
     const out = [];
     for (const item of Array.isArray(items) ? items : []) {
       if (!item || item.state !== 'idle') continue;
+      if (item.skip) continue;
       if (!item.to && item.phase === 'listed') continue;
       out.push(item);
     }
@@ -447,6 +450,10 @@
   .pue-bulk-item[data-open="true"]{background:var(--dsw-alias-bg-layer-2)}
   .pue-bulk-head{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--dsw-radius-sm);min-width:0}
   .pue-bulk-head:hover{background:var(--dsw-alias-interactive-bg-hover)}
+  .pue-bulk-check{flex:none;width:13px;height:13px;margin:0;accent-color:var(--dsw-alias-brand-primary);cursor:pointer}
+  .pue-bulk-check:disabled{cursor:default}
+  .pue-bulk-item[data-skip="true"] .pue-bulk-name,.pue-bulk-item[data-skip="true"] .pue-bulk-from{color:var(--dsw-alias-label-tertiary);text-decoration:line-through}
+  .pue-bulk-item[data-skip="true"] .pue-bulk-pick{opacity:.5}
   .pue-bulk-name{min-width:0;flex:1;font-size:12px;line-height:18px;color:var(--dsw-alias-label-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .pue-bulk-from{flex:none;font-size:11px;line-height:18px;color:var(--dsw-alias-label-tertiary);font-variant-numeric:tabular-nums}
   .pue-bulk-arrow{flex:none;font-size:11px;line-height:18px;color:var(--dsw-alias-label-tertiary)}
@@ -558,6 +565,14 @@
           allFailed: '失败',
           allSkipped: '已跳过',
           allStopped: '已停止，剩余 {count} 个未处理',
+          allStoppedRow: '已停止，未更新',
+          allSkippedByUser: '未勾选，已跳过',
+          allStopping: '正在停止，等 {name} 装完就停',
+          allStoppingShort: '正在停止',
+          allExcluded: '{count} 个未勾选',
+          allSelectAll: '全选',
+          allSelectNone: '全不选',
+          allInclude: '纳入更新：{name}',
           allSkippedDetail: '{count} 个已跳过',
           allStop: '停止',
           allPick: '选择版本',
@@ -644,6 +659,14 @@
           allFailed: 'Failed',
           allSkipped: 'Skipped',
           allStopped: 'Stopped with {count} left to process',
+          allStoppedRow: 'Stopped, not updated',
+          allSkippedByUser: 'Unticked, skipped',
+          allStopping: 'Stopping after {name} finishes',
+          allStoppingShort: 'Stopping',
+          allExcluded: '{count} unticked',
+          allSelectAll: 'Select all',
+          allSelectNone: 'Deselect all',
+          allInclude: 'Include in update: {name}',
           allSkippedDetail: '{count} skipped',
           allStop: 'Stop',
           allPick: 'Choose version',
@@ -1871,6 +1894,14 @@
             onclick: (event) => {
               event.preventDefault();
               event.stopPropagation();
+              /* A finished run keeps its panel around so the result stays
+               * readable; clicking the toolbar entry again has to mean "check
+               * again", not "close this and make me click a second time". */
+              if (bulk.phase === 'running') return;
+              if (bulk.phase === 'done') {
+                restartBulk();
+                return;
+              }
               if (bulk.open) closeBulk({ restoreFocus: true });
               else openBulk();
             },
@@ -1914,6 +1945,25 @@
           syncBulkButton();
           if (!bulk.items.length && bulk.phase !== 'running' && bulk.phase !== 'done') loadBulk();
           else renderBulk();
+        }
+
+        /** Start over from a finished run without closing the panel: the whole
+         * point of the toolbar entry is one click to a fresh check. */
+        function restartBulk() {
+          if (bulk.phase === 'running') return;
+          bulk.phase = 'idle';
+          bulk.items = [];
+          bulk.error = '';
+          bulk.cancelled = false;
+          bulk.expanded = null;
+          bulk.index = 0;
+          bulk.total = 0;
+          bulk.currentName = '';
+          if (!bulk.open) {
+            openBulk();
+            return;
+          }
+          loadBulk();
         }
 
         function closeBulk(options) {
@@ -2042,6 +2092,7 @@
           bulk.error = '';
           bulk.items = [];
           bulk.expanded = null;
+          bulk.cancelled = false;
           renderBulk();
           try {
             if (!(await inventoryAvailable())) {
@@ -2061,6 +2112,7 @@
               state: 'idle',
               error: '',
               outcome: null,
+              skip: false,
             }));
             bulk.phase = bulk.items.length ? 'listed' : 'empty';
             for (const item of bulk.items) primeBulkVersions(item);
@@ -2182,6 +2234,23 @@
           const open = bulk.expanded === item.name;
           const busy = bulk.phase === 'running';
           const moved = item.to && item.to !== item.from;
+          /* Ticking a row is how a partial update happens: unticked rows stay
+           * listed (so the user can see what was skipped and why) but the run
+           * never touches them. */
+          const check = el('input', {
+            class: 'pue-bulk-check',
+            type: 'checkbox',
+            'aria-label': t('allInclude', { name: item.name }),
+            disabled: busy || item.state !== 'idle',
+            onclick: (event) => event.stopPropagation(),
+            onchange: (event) => {
+              event.stopPropagation();
+              item.skip = !event.target.checked;
+              hideBulkNotes();
+              renderBulk();
+            },
+          });
+          check.checked = !item.skip;
           const pick = el('button', {
             class: 'pue-bulk-pick',
             type: 'button',
@@ -2211,6 +2280,7 @@
             },
           },
           bulkStateNode(item),
+          check,
           el('span', { class: 'pue-bulk-name', title: item.name }, item.name),
           el('span', { class: 'pue-bulk-from' }, item.from || '—'),
           moved ? el('span', { class: 'pue-bulk-arrow' }, '→') : null,
@@ -2220,6 +2290,7 @@
             'data-name': item.name,
             'data-open': open ? 'true' : 'false',
             'data-state': item.state,
+            'data-skip': item.skip ? 'true' : 'false',
           }, head);
           if (item.error) node.append(el('div', { class: 'pue-bulk-note', 'data-tone': 'error' }, item.error));
           else if (item.phase === 'listed' && !item.to && item.state === 'idle') {
@@ -2323,7 +2394,7 @@
             const detail = item.state === 'done'
               ? (item.to || '')
               : item.state === 'skipped'
-                ? t('allSkipped')
+                ? (item.skip ? t('allSkippedByUser') : item.stopped ? t('allStoppedRow') : t('allSkipped'))
                 : (item.error || t('allFailed'));
             return el('div', { class: 'pue-bulk-line', 'data-tone': tone },
               el('span', { class: 'pue-bulk-name', title: item.name }, item.name),
@@ -2333,21 +2404,28 @@
 
         function bulkFootNodes() {
           if (bulk.phase === 'running') {
+            /* A request already sent cannot be recalled — the Host holds an
+             * exclusive lock on the profile while it installs. Stopping only
+             * prevents the *next* package, so the panel has to say that plainly;
+             * otherwise the button looks broken for the minutes an install
+             * takes. */
             return [
               el('div', { class: 'pue-bulk-note' },
-                t('allProgress', { index: bulk.index, total: bulk.total, name: bulk.currentName || '—' })),
+                bulk.cancelled
+                  ? t('allStopping', { name: bulk.currentName || '—' })
+                  : t('allProgress', { index: bulk.index, total: bulk.total, name: bulk.currentName || '—' })),
               el('div', { class: 'pue-actions' },
                 el('span', { class: 'pue-spacer' }),
                 el('button', {
                   class: 'pue-ghost',
                   type: 'button',
+                  disabled: bulk.cancelled,
                   onclick: () => {
-                    /* A request already sent cannot be recalled; the flag only
-                     * stops the next package, which is the safe thing to promise. */
                     bulk.cancelled = true;
                     renderBulk();
+                    syncBulkButton();
                   },
-                }, t('allStop'))),
+                }, bulk.cancelled ? t('allStoppingShort') : t('allStop'))),
             ];
           }
           if (bulk.phase === 'done') {
@@ -2359,6 +2437,11 @@
                 summary.failed ? `${t('allPartial')} · ${detail}` : detail),
               el('div', { class: 'pue-actions' },
                 el('span', { class: 'pue-spacer' }),
+                el('button', {
+                  class: 'pue-ghost',
+                  type: 'button',
+                  onclick: () => loadBulk(),
+                }, t('allRetry')),
                 el('button', {
                   class: 'pue-primary',
                   type: 'button',
@@ -2373,11 +2456,25 @@
            * so a batch with no target yet is still runnable. A disabled button
            * reading "update 0" is exactly how a real update looks undetected. */
           const stuck = targets.length - ready;
+          const rows = bulkRows(bulk.items);
+          const excluded = rows.filter((item) => item.skip).length;
+          const allSkipped = rows.length > 0 && excluded === rows.length;
           const label = t('allRun', { count: targets.length });
           return [
             el('div', { class: 'pue-bulk-note' },
-              stuck && ready ? `${t('allHint')} · ${t('allStuck', { count: stuck })}` : t('allHint')),
+              stuck && ready ? `${t('allHint')} · ${t('allStuck', { count: stuck })}` : t('allHint'),
+              excluded ? ` · ${t('allExcluded', { count: excluded })}` : ''),
             el('div', { class: 'pue-actions' },
+              rows.length ? el('button', {
+                class: 'pue-ghost',
+                type: 'button',
+                onclick: () => {
+                  const skip = !allSkipped;
+                  for (const item of rows) item.skip = skip;
+                  hideBulkNotes();
+                  renderBulk();
+                },
+              }, allSkipped ? t('allSelectAll') : t('allSelectNone')) : null,
               el('span', { class: 'pue-spacer' }),
               el('button', {
                 class: 'pue-primary',
@@ -2422,6 +2519,8 @@
             if (item.state !== 'idle') continue;
             if (bulk.cancelled) {
               item.state = 'skipped';
+              item.stopped = true;
+              item.error = t('allStoppedRow');
               renderBulk();
               continue;
             }
@@ -2457,7 +2556,10 @@
           for (const item of bulkRows(bulk.items)) {
             if (item.state !== 'idle') continue;
             item.state = 'skipped';
-            item.error = item.phase === 'listed' ? t('noneInstallable') : t('unknown');
+            /* An unticked row was left out on purpose — say that, instead of
+             * claiming the package had nothing to install. */
+            if (item.skip) item.error = t('allSkippedByUser');
+            else item.error = item.phase === 'listed' ? t('noneInstallable') : t('unknown');
           }
           bulk.phase = 'done';
           bulk.currentName = '';
