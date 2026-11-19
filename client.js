@@ -41,7 +41,7 @@
    * Pure helpers (also exported for `node --test`, see `__pure` below)
    * ------------------------------------------------------------------ */
 
-  const BUILD = '1.0.4';
+  const BUILD = '1.0.5';
 
   /* Read a cordis service by its registration name, without the ctx proxy guard.
    *
@@ -275,6 +275,59 @@
     return out;
   }
 
+  /** Run `worker` over `items` with at most `limit` in flight.
+   *
+   * The versions of a whole batch are independent reads, so they belong
+   * together: a failed run has to re-read every row, and doing that one row at
+   * a time costs a full round trip each. Updates cannot use this (the Host
+   * serializes them on a file lock), but reads have no such ordering. */
+  function mapLimit(items, limit, worker) {
+    const queue = Array.isArray(items) ? items.slice() : [];
+    const width = Math.max(1, Math.min(Number(limit) || 1, queue.length));
+    const lanes = [];
+    for (let lane = 0; lane < width; lane += 1) {
+      lanes.push((async () => {
+        for (;;) {
+          const next = queue.shift();
+          if (next === undefined) return;
+          await worker(next);
+        }
+      })());
+    }
+    return Promise.all(lanes);
+  }
+
+  /** Compact duration for a row: `8s`, `1m 05s`, `1h 02m`. */
+  function formatElapsed(ms) {
+    const total = Math.max(0, Math.round((Number(ms) || 0) / 1000));
+    if (total < 60) return `${total}s`;
+    const minutes = Math.floor(total / 60);
+    const seconds = total % 60;
+    if (minutes < 60) return `${minutes}m ${String(seconds).padStart(2, '0')}s`;
+    const hours = Math.floor(minutes / 60);
+    return `${hours}h ${String(minutes % 60).padStart(2, '0')}m`;
+  }
+
+  /* Samples of how long this machine actually takes to install one package.
+   * Kept in memory only: it is a hint for the next run, not a statistic worth
+   * persisting. */
+  const DURATION_SAMPLES = [];
+
+  function noteDuration(ms) {
+    if (!(ms > 0)) return;
+    DURATION_SAMPLES.push(ms);
+    if (DURATION_SAMPLES.length > 8) DURATION_SAMPLES.shift();
+  }
+
+  /* Median, not mean: one network-stalled install should not set the estimate
+   * for everything after it. `null` means "nothing measured yet" and the UI
+   * falls back to prose instead of inventing a number. */
+  function estimateEach() {
+    if (DURATION_SAMPLES.length === 0) return null;
+    const sorted = DURATION_SAMPLES.slice().sort((left, right) => left - right);
+    return sorted[Math.floor(sorted.length / 2)];
+  }
+
   function messageOf(error) {
     if (!error) return '';
     return String(error.message || error.error || error || '');
@@ -284,6 +337,13 @@
    * exists, so the Chinese default lives here and DICT reuses it. */
   const FALLBACK_UNAVAILABLE = '与 DSH 的连接尚未就绪，请稍后重试';
 
+  /* The Host wraps every profile mutation in an exclusive file lock whose
+   * default wait is two minutes (`lockWaitMs`). A second update started while
+   * one is installing therefore fails with this lock message rather than with
+   * anything the user did — say what it means instead of quoting it. Module
+   * scope for the same reason as the fallback above. */
+  const FALLBACK_LOCKED = '上一次更新仍在进行，请稍后重试';
+
   /* A raw `cannot get property "…" without inject` is a cordis proxy guard, never
    * something a user can act on. Map it (and the other transport-level strings)
    * to the localized explanation; the raw text still reaches the console. */
@@ -292,6 +352,9 @@
     if (!raw) return '';
     if (/without inject|cannot get property|client api:|has no active Connection/i.test(raw)) {
       return FALLBACK_UNAVAILABLE;
+    }
+    if (/timed out waiting for the writer lock|waiting for the writer lock/i.test(raw)) {
+      return FALLBACK_LOCKED;
     }
     return raw;
   }
@@ -321,6 +384,8 @@
       bulkSummary,
       bulkRows,
       bulkTargets,
+      mapLimit,
+      formatElapsed,
     },
     factory() {
       const SEL = {
@@ -457,6 +522,8 @@
   .pue-bulk-name{min-width:0;flex:1;font-size:12px;line-height:18px;color:var(--dsw-alias-label-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .pue-bulk-from{flex:none;font-size:11px;line-height:18px;color:var(--dsw-alias-label-tertiary);font-variant-numeric:tabular-nums}
   .pue-bulk-arrow{flex:none;font-size:11px;line-height:18px;color:var(--dsw-alias-label-tertiary)}
+  .pue-bulk-elapsed{flex:none;margin-left:auto;font-size:11px;line-height:18px;color:var(--dsw-alias-label-tertiary);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .pue-bulk-took{flex:none;margin-left:auto;font-size:11px;line-height:18px;color:var(--dsw-alias-label-tertiary);font-variant-numeric:tabular-nums}
   .pue-bulk-pick{flex:none;display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 6px;border:1px solid var(--dsw-alias-border-l2);border-radius:var(--dsw-radius-xs);background:var(--dsw-alias-bg-layer-3);color:var(--dsw-alias-label-primary);font-family:inherit;font-size:11px;line-height:1;cursor:pointer;font-variant-numeric:tabular-nums;white-space:nowrap}
   .pue-bulk-pick:hover{background:var(--dsw-alias-interactive-bg-hover)}
   .pue-bulk-pick:focus-visible{outline:var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color);outline-offset:1px}
@@ -573,6 +640,10 @@
           allSelectAll: '全选',
           allSelectNone: '全不选',
           allInclude: '纳入更新：{name}',
+          allLocked: FALLBACK_LOCKED,
+          allSlowHint: '宿主正在安装，网络慢时会更久',
+          allEta: '约 {count} × {each}',
+          allEtaUnknown: '装上之后这里会显示实际耗时',
           allSkippedDetail: '{count} 个已跳过',
           allStop: '停止',
           allPick: '选择版本',
@@ -667,6 +738,10 @@
           allSelectAll: 'Select all',
           allSelectNone: 'Deselect all',
           allInclude: 'Include in update: {name}',
+          allLocked: 'Another update is still running. Try again in a moment.',
+          allSlowHint: 'the Host is still installing; a slow registry makes this longer',
+          allEta: 'about {count} × {each}',
+          allEtaUnknown: 'actual timings show up here after the first install',
           allSkippedDetail: '{count} skipped',
           allStop: 'Stop',
           allPick: 'Choose version',
@@ -758,6 +833,7 @@
           currentName: '',
           index: 0,
           total: 0,
+          startedAt: 0,
           button: null,
           anchor: null,
           panel: null,
@@ -826,6 +902,10 @@
           attach();
           return () => {
             disposed = true;
+            if (bulkClock !== 0) {
+              clearInterval(bulkClock);
+              bulkClock = 0;
+            }
             stopEvents();
             detach();
           };
@@ -2113,6 +2193,9 @@
               error: '',
               outcome: null,
               skip: false,
+              startedAt: 0,
+              elapsed: 0,
+              retried: false,
             }));
             bulk.phase = bulk.items.length ? 'listed' : 'empty';
             for (const item of bulk.items) primeBulkVersions(item);
@@ -2172,6 +2255,53 @@
           item.to = pick ? pick.version : '';
         }
 
+        /* An install takes minutes and the Host offers no progress stream, so the
+         * only honest signal is a clock. Rewriting a *text node's* value is a
+         * characterData change, which this file's MutationObserver does not
+         * watch — writing `textContent` instead would queue a rescan every
+         * single second. */
+        let bulkClock = 0;
+
+        function tickBulkClock() {
+          if (disposed || !bulk.body) return;
+          const now = Date.now();
+          for (const node of bulk.body.querySelectorAll('[data-elapsed]')) {
+            const started = Number(node.getAttribute('data-elapsed')) || 0;
+            if (!started) continue;
+            const elapsed = now - started;
+            const text = elapsed >= SLOW_INSTALL_MS
+              ? `${formatElapsed(elapsed)} · ${t('allSlowHint')}`
+              : formatElapsed(elapsed);
+            const first = node.firstChild;
+            if (first && first.nodeType === 3) {
+              if (first.nodeValue !== text) first.nodeValue = text;
+            } else if (node.textContent !== text) {
+              node.textContent = text;
+            }
+          }
+          if (!bulk.foot) return;
+          const foot = bulk.foot.querySelector('[data-elapsed]');
+          if (!foot) return;
+          const started = Number(foot.getAttribute('data-elapsed')) || 0;
+          if (!started) return;
+          const text = formatElapsed(now - started);
+          const first = foot.firstChild;
+          if (first && first.nodeType === 3) {
+            if (first.nodeValue !== text) first.nodeValue = text;
+          } else if (foot.textContent !== text) {
+            foot.textContent = text;
+          }
+        }
+
+        function syncBulkClock() {
+          const want = bulk.phase === 'running' && bulk.open && !disposed;
+          if (want && bulkClock === 0) bulkClock = setInterval(tickBulkClock, 1000);
+          else if (!want && bulkClock !== 0) {
+            clearInterval(bulkClock);
+            bulkClock = 0;
+          }
+        }
+
         function renderBulk() {
           if (!bulk.panel || !bulk.body || !bulk.foot) return;
           /* A version check finishing in the background rebuilds this body and
@@ -2189,6 +2319,7 @@
           } else {
             hideBulkNotes();
           }
+          syncBulkClock();
           positionBulk();
         }
 
@@ -2283,6 +2414,14 @@
           check,
           el('span', { class: 'pue-bulk-name', title: item.name }, item.name),
           el('span', { class: 'pue-bulk-from' }, item.from || '—'),
+          /* Live counter for the row that is installing right now: an install can
+           * take minutes, and a spinner with no number reads as "stuck". */
+          item.state === 'running' && item.startedAt
+            ? el('span', {
+              class: 'pue-bulk-elapsed',
+              'data-elapsed': String(item.startedAt),
+            }, formatElapsed(Date.now() - item.startedAt))
+            : null,
           moved ? el('span', { class: 'pue-bulk-arrow' }, '→') : null,
           pick);
           const node = el('div', {
@@ -2396,9 +2535,15 @@
               : item.state === 'skipped'
                 ? (item.skip ? t('allSkippedByUser') : item.stopped ? t('allStoppedRow') : t('allSkipped'))
                 : (item.error || t('allFailed'));
+            /* How long each install actually took — the only way to tell a slow
+             * registry from a stuck one after the fact. */
+            /* Under a second there is nothing worth reporting — and a row that
+             * says `0s` next to a version reads like a failed install. */
+            const took = item.elapsed >= 1000 && item.state !== 'skipped' ? formatElapsed(item.elapsed) : '';
             return el('div', { class: 'pue-bulk-line', 'data-tone': tone },
               el('span', { class: 'pue-bulk-name', title: item.name }, item.name),
-              el('span', {}, detail));
+              el('span', {}, detail),
+              took ? el('span', { class: 'pue-bulk-took' }, took) : null);
           }));
         }
 
@@ -2413,7 +2558,9 @@
               el('div', { class: 'pue-bulk-note' },
                 bulk.cancelled
                   ? t('allStopping', { name: bulk.currentName || '—' })
-                  : t('allProgress', { index: bulk.index, total: bulk.total, name: bulk.currentName || '—' })),
+                  : t('allProgress', { index: bulk.index, total: bulk.total, name: bulk.currentName || '—' }),
+                bulk.cancelled ? null : el('span', { class: 'pue-bulk-elapsed', 'data-elapsed': String(bulk.startedAt || Date.now()) },
+                  formatElapsed(Date.now() - (bulk.startedAt || Date.now())))),
               el('div', { class: 'pue-actions' },
                 el('span', { class: 'pue-spacer' }),
                 el('button', {
@@ -2460,10 +2607,21 @@
           const excluded = rows.filter((item) => item.skip).length;
           const allSkipped = rows.length > 0 && excluded === rows.length;
           const label = t('allRun', { count: targets.length });
+          /* An install is measured in minutes and the Host reports nothing while
+           * it runs, so say up front what this is going to cost. The estimate
+           * comes from this session's own finished installs; with no sample yet
+           * the wording stays vague on purpose. */
+          const each = estimateEach();
+          const eta = targets.length === 0
+            ? ''
+            : each === null
+              ? ` · ${t('allEtaUnknown')}`
+              : ` · ${t('allEta', { count: targets.length, each: formatElapsed(each) })}`;
           return [
             el('div', { class: 'pue-bulk-note' },
               stuck && ready ? `${t('allHint')} · ${t('allStuck', { count: stuck })}` : t('allHint'),
-              excluded ? ` · ${t('allExcluded', { count: excluded })}` : ''),
+              excluded ? ` · ${t('allExcluded', { count: excluded })}` : '',
+              eta),
             el('div', { class: 'pue-actions' },
               rows.length ? el('button', {
                 class: 'pue-ghost',
@@ -2485,10 +2643,31 @@
           ];
         }
 
-        /* One request at a time, strictly sequential: `updateBundle` rewrites the
-         * same profile, so concurrent installs would fight over it. The card-level
-         * `running` slot stays untouched — a bulk run drives this panel's own
-         * progress line instead of opening a card popover. */
+        /* Version reads are independent, so they go four at a time: a single
+         * read takes one to three seconds on a real Host, and a failed run has
+         * to re-read every row it could not resolve. */
+        const BULK_READ_LIMIT = 4;
+
+        /* Installs are *not* independent. `updateBundle` blocks on the profile's
+         * writer lock for the whole pnpm run, and the Host abandons that lock
+         * after two minutes (`lockWaitMs` default 120e3) while a real install
+         * takes longer than that — so a second request started early does not
+         * run concurrently, it just times out on the lock. Measured on this
+         * machine: one serial update 3–6 minutes, a contended request fails with
+         * `atomic-write: timed out waiting for the writer lock`.
+         *
+         * Keeping one in flight also keeps "Stop" honest: it must mean "the
+         * packages after this one will not be touched". */
+        const BULK_UPDATE_LIMIT = 1;
+
+        /* Past this the number stops being the whole story: the Host is inside
+         * pnpm and a slow registry can stretch it a lot. */
+        const SLOW_INSTALL_MS = 90 * 1000;
+
+        /* One request at a time per package, at most two in flight: `updateBundle`
+         * rewrites the same profile, so a deeper queue would fight over it. The
+         * card-level `running` slot stays untouched — a bulk run drives this
+         * panel's own progress line instead of opening a card popover. */
         async function runBulk() {
           if (bulk.phase === 'running') return;
           const rows = bulkTargets(bulk.items);
@@ -2498,52 +2677,85 @@
           bulk.currentName = '';
           bulk.index = 0;
           bulk.total = 0;
+          bulk.startedAt = Date.now();
           bulk.expanded = null;
           hideBulkNotes();
           renderBulk();
           syncBulkButton();
           /* A row whose version read failed or was still in flight is not the
            * same thing as "nothing to install". Skipping it silently is what
-           * makes a real update look undetected, so re-read it first. */
-          for (const item of rows) {
-            if (bulk.cancelled || item.to || item.phase === 'listed') continue;
-            bulk.currentName = item.name;
-            renderBulk();
+           * makes a real update look undetected, so re-read it first — in
+           * parallel, because nothing here depends on the row before it. */
+          const unread = rows.filter((item) => !item.to && item.phase !== 'listed');
+          await mapLimit(unread, BULK_READ_LIMIT, async (item) => {
+            if (bulk.cancelled || disposed) return;
             await primeBulkVersions(item, true);
-            if (disposed) return;
-          }
-          bulk.total = rows.filter((item) => item.to).length;
+            if (disposed || !bulk.open) return;
+            renderBulk();
+          });
+          if (disposed) return;
+          bulk.total = 0;
           bulk.currentName = '';
+          bulk.total = rows.filter((item) => item.to).length;
           renderBulk();
+          const queue = [];
           for (const item of rows) {
             if (item.state !== 'idle') continue;
             if (bulk.cancelled) {
               item.state = 'skipped';
               item.stopped = true;
               item.error = t('allStoppedRow');
-              renderBulk();
               continue;
             }
             if (!item.to) {
               item.state = 'skipped';
               item.error = item.phase === 'listed' ? t('noneInstallable') : t('unknown');
-              renderBulk();
               continue;
+            }
+            queue.push(item);
+          }
+          renderBulk();
+          /* A request that lost the writer-lock race did not touch the profile,
+           * so it is safe to run it again once the queue has drained. */
+          const lostLock = [];
+          const apply = async (item) => {
+            if (item.state !== 'idle' || !item.to) return;
+            /* Re-checked here rather than only while building the queue: a run
+             * that takes minutes must honour a Stop pressed halfway through. */
+            if (bulk.cancelled) {
+              item.state = 'skipped';
+              item.stopped = true;
+              item.error = t('allStoppedRow');
+              renderBulk();
+              return;
             }
             bulk.index += 1;
             bulk.currentName = item.name;
             item.state = 'running';
             item.error = '';
+            item.startedAt = Date.now();
+            item.elapsed = 0;
             renderBulk();
             const registry = (item.list && item.list.registry) || undefined;
             const requestId = makeRequestId();
             let answer;
+            let locked = false;
             try {
               answer = await viaTiers('updateBundle', [item.name, item.to, { registry, requestId }], { mutating: true });
             } catch (error) {
+              locked = /waiting for the writer lock/i.test(messageOf(error));
               answer = { ok: false, error: { message: userMessage(error) } };
             }
             if (disposed) return;
+            item.elapsed = Date.now() - item.startedAt;
+            if (locked && item.state === 'running' && !item.retried) {
+              item.retried = true;
+              item.state = 'idle';
+              lostLock.push(item);
+              renderBulk();
+              return;
+            }
+            noteDuration(item.elapsed);
             const outcome = outcomeOf(answer);
             item.outcome = outcome;
             const ok = outcome.kind === 'done' || outcome.kind === 'restart';
@@ -2552,6 +2764,11 @@
             versionCache.delete(item.name);
             renderBulk();
             if (ok) schedule();
+          };
+          await mapLimit(queue, BULK_UPDATE_LIMIT, apply);
+          for (const item of lostLock) {
+            if (disposed || bulk.cancelled) break;
+            await apply(item);
           }
           for (const item of bulkRows(bulk.items)) {
             if (item.state !== 'idle') continue;

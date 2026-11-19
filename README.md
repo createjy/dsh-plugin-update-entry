@@ -59,7 +59,14 @@
 - 新版本存在但在这台机器上装不了的包（例如要求更高的 DSH）仍然留在列表里，行下标出「没有可直接安装的新版本」，一键更新时自动跳过，不会静默失败。
 - 版本读取失败或还没回来的行显示「重试」而不是「正在检查更新」，并且**不会让底部按钮失效**——点「更新 N 个」时会先补读这些行，读完仍拿不到才跳过。这条是必须的：把「没读到」当成「没有更新」正是真实的更新看起来"没被检测到"的原因。
 
-点「更新 N 个」后**按列表顺序逐个更新**，一次只有一个插件在动（同一时刻只应有一个写操作），面板里逐行显示进度与结果，底部汇总「x 个已更新，y 个失败 · z 个已跳过」。被跳过的行会在汇总里点名，不会凭空消失。
+点「更新 N 个」后**按列表顺序逐个更新**，一次只有一个插件在动，面板里逐行显示进度与结果，底部汇总「x 个已更新，y 个失败 · z 个已跳过」。被跳过的行会在汇总里点名，不会凭空消失。
+
+安装阶段的慢是宿主的：每次更新都在 `profile/package.json` 的写锁里跑一遍 pnpm 全量重解析，实测一次 3–6 分钟，而且抢锁超过两分钟就报 `atomic-write: timed out waiting for the writer lock`。所以这里做了三件事：
+
+- **能并行的先并行**：开跑前对「版本还没读到」的行做 4 路并发补读，而不是一个一个往返；安装本身仍然严格串行（并发只会排队在锁上，然后超时失败，还让「停止」失效）。
+- **慢要看得见**：正在装的那一行和页脚都逐秒计时，超过 90 秒追加「宿主正在安装，网络慢时会更久」；跑完每行保留实际耗时，不足 1 秒不显示（`0s` 看起来像没装）。
+- **耗时变成预期**：页脚用已跑完的样本中位数估「约 N × 32s」，第一次运行之前说明「装上之后这里会显示实际耗时」。
+- **抢锁超时不算失败**：这类错误说明请求根本没进 pnpm，面板提示「上一次更新仍在进行，请稍后重试」，并在队列排空后自动重试一次，而不是把包标成更新失败。
 
 运行中可以「停止」。已经发给 Host 的那一次安装无法撤回——它持有 `package.json` 的独占锁，必须跑完——所以停止的真实含义是「这一个装完就不再开始下一个」。界面按这个事实说：点下停止后按钮变灰并显示「正在停止」，进度文案变成「正在停止，等 <包名> 装完就停」，不再是一个点了没有任何变化的死按钮。
 
@@ -89,7 +96,7 @@ dsh-plugin-update-entry
 也可以直接装 Release 里附带的 `npm pack` 产物（与 npm 上的 tarball 是同一份字节）：
 
 ```
-https://github.com/createjy/dsh-plugin-update-entry/releases/download/v1.0.4/dsh-plugin-update-entry-1.0.4.tgz
+https://github.com/createjy/dsh-plugin-update-entry/releases/download/v1.0.5/dsh-plugin-update-entry-1.0.5.tgz
 ```
 
 装好后插件页会多出一行「插件更新入口」，默认启用。它自己也是一个普通组合包，可以随时关掉——关掉后注入的按钮和浮层会一并移除，页面回到原样。
@@ -127,7 +134,7 @@ rc.5 对客户端是**零改动**：它的 `@deepseek-ai/dsh-client-ui-plugin-ma
 
 **先不要重复提交上架申请**——条目已经在目录里，再提交一份会变成两条重复记录。
 
-索引里的版本号靠目录重建来追：`1.0.4` 是 2026-11-19 发上 npm 的，之后的目录构建才会收录它。想确认「目录是否已跟上」，看下面命令的 `officialCatalog.entry.versions[0].version` 是不是你刚发的版本，而不是看 `stage`。
+索引里的版本号靠目录重建来追：`1.0.5` 是 2026-11-19 发上 npm 的，之后的目录构建才会收录它。想确认「目录是否已跟上」，看下面命令的 `officialCatalog.entry.versions[0].version` 是不是你刚发的版本，而不是看 `stage`。
 
 复查命令（每次都看这一条的输出，别靠印象）：
 
@@ -217,10 +224,10 @@ test/harness/         jsdom harness：服务层 / connection.rpc / 仅 fetch / �
 
 ```sh
 npm install     # 只装 devDependencies：jsdom + @deepseek-ai/cordis + semver
-npm test        # 23 条纯函数 + 12 条 DOM/脚本回归 + 2 条 engines 边界
+npm test        # 23 条纯函数 + 13 条 DOM/脚本回归 + 2 条 engines 边界
 ```
 
-`npm test` 不需要 DSH 在跑。十二条 DOM 回归分别在 jsdom 里还原官方卡片与工具栏结构，覆盖插件在浏览器里可能遇到的传输形态：
+`npm test` 不需要 DSH 在跑。十三条 DOM 回归分别在 jsdom 里还原官方卡片与工具栏结构，覆盖插件在浏览器里可能遇到的传输形态：
 
 | harness | 上下文 | 证明什么 |
 | --- | --- | --- |
@@ -233,6 +240,7 @@ npm test        # 23 条纯函数 + 12 条 DOM/脚本回归 + 2 条 engines 边�
 | `harness-bulk-filters.mjs` | jsdom，注册表返回空版本 / 版本读取失败 | 空版本的行被隐藏而不是标「已是最新版本」；读取失败的行不阻断「更新 N 个」，运行时先补读、仍失败才记为已跳过并汇总 |
 | `harness-bulk-nonote.mjs` | jsdom，工具栏里没有官方提示节点 | 一键更新按钮照常挂在工具栏（官方刷新期间提示节点会消失几分钟）；按钮上的数字等于实际可见行数；提示节点回来时按钮排到它后面且不会重复；离开插件页时按钮与面板一起移除 |
 | `harness-bulk-gate.mjs` | jsdom，`managementAvailable: false` | 先问 `pluginInventory/list` 再读列表；无可用 profile 时显示只读提示与「重新读取」，一个 `listBundles` 都不发；翻转后同一次重试能正常列出 |
+| `harness-bulk-speed.mjs` | jsdom，5 个包、版本读取首轮全失败、安装各 1.2 s、其中一个首次抢锁超时 | 补读确实 4 路并发（`peakReads 4`）；运行中行内与页脚都有计时；跑完每行保留耗时；抢锁超时的那一个在队列排空后重试并成功；页脚给出「约 5 × 1s」 |
 | `harness-bulk-stop.mjs` | jsdom，勾选部分行 + `updateBundle` 被卡住 | 取消勾选的行不参与更新且被点名；「全不选」让按钮变灰为零；点停止后底部立刻变成「正在停止」且按钮变灰；已发出的那一个照常跑完，其余标「已停止，未更新」；跑完再点工具栏按钮会重新读一次列表而不是只关面板 |
 
 单独跑某一条：`node test/harness/harness-fetch.mjs`。缺 devDependencies 时这些会跳过，纯函数照跑。
@@ -244,7 +252,7 @@ npm test        # 23 条纯函数 + 12 条 DOM/脚本回归 + 2 条 engines 边�
 推 `v*` tag 即由 `.github/workflows/release.yml` 发布到 npm，走 **Trusted Publishing（OIDC）**：工作流只申请 `id-token: write`，npm 用 GitHub 签发的短期 OIDC token 换发布凭据，仓库里不需要也不应该放 `NPM_TOKEN`。账号开了 2FA 也能这么发，并且会自动带 provenance 证明。
 
 ```
-git tag v1.0.4 && git push origin v1.0.4
+git tag v1.0.5 && git push origin v1.0.5
 ```
 
 ## 许可

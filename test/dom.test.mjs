@@ -272,7 +272,24 @@ test('dom: unticked rows are skipped and a stopped run can start again', { skip:
   /* The click has to change what is on screen: an unchanged footer is what made
    * the stop button look dead while a multi-minute install ran. */
   assert.match(output, /5 stop true disabled true label 正在停止/);
-  assert.match(output, /6 done dsh-alpha0\.1\.1 \| dsh-beta未勾选，已跳过 \| dsh-gamma已停止，未更新/);
+  assert.match(output, /6 done dsh-alpha0\.1\.1(\d+s)? \| dsh-beta未勾选，已跳过 \| dsh-gamma已停止，未更新/);
   assert.match(output, /6b updates \[\["updateBundle","dsh-alpha","0\.1\.1"\]\]/);
   assert.match(output, /7 restart panel true reads 1->2/);
+});
+
+/**
+ * A batch of sixteen shows two costs the panel used to hide: the version
+ * re-read that never landed was retried one round trip at a time, and a
+ * multi-minute install showed nothing at all. This pins the concurrent
+ * re-read, the live clock, the per-row duration and the writer-lock retry.
+ */
+test('dom: unread versions are re-read in parallel and installs show their time', { skip: noJsdom || noCordis }, () => {
+  const output = run('harness-bulk-speed.mjs');
+  assert.match(output, /1 peakReads 4/);
+  /* A writer-lock timeout means the request never reached pnpm: it is queued
+   * again after the batch drains rather than reported as a failed update. */
+  assert.match(output, /4 locks \{"dsh-locky":1\} updates \["dsh-a","dsh-b","dsh-c","dsh-d","dsh-locky","dsh-locky"\]/);
+  assert.match(output, /2 elapsed true true/);
+  assert.match(output, /3b took 5/);
+  assert.match(output, /5 eta true/);
 });
