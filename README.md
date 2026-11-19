@@ -110,17 +110,19 @@ rc.5 对客户端是**零改动**：它的 `@deepseek-ai/dsh-client-ui-plugin-ma
 
 ## 市场收录状态
 
-截至 **2026-11-18**，本插件已收录进市场目录，`npm` 上也有 `1.0.2` 了。同一次复查的输出：
+截至 **2026-11-19**，本插件已进入三处目录。同一次复查的输出：
 
 | 检查项 | 结果 |
 | --- | --- |
-| GitHub 仓库 topic | ✅ `topics` 含 `dsh-plugin`（`hasDshPluginTopic: true`，`ageDays: 5`） |
-| 目录条目（`registry entry`） | ✅ `data/plugins/createjy__dsh-plugin-update-entry.yml` 返回 200（旧的 `creatjy__` 那份已被改名 PR 替换） |
-| 市场索引 | ✅ `dshMarket.entry` 有 `createjy/dsh-plugin-update-entry`，`category: ui`，`tarball` 指向 `releases/latest/download/dsh-plugin-update-entry.tgz` |
+| GitHub 仓库 topic | ✅ `topics` 含 `dsh-plugin`（`hasDshPluginTopic: true`） |
+| 目录条目（`registry entry`） | ✅ `data/plugins/createjy__dsh-plugin-update-entry.yml` 返回 200 |
+| 官方 Discover 索引 | ✅ 已收录 —— `dsh-plugin-catalog/index.json` 里 `name: dsh-plugin-update-entry`，`title: createjy/dsh-plugin-update-entry`，`category: ui`，`versions[0] = 1.0.2`（`source: npm`，`engines.dsh: ^0.2.2-rc.1`） |
+| `dsh.market` 独立扫描 | ✅ 有 `createjy/dsh-plugin-update-entry`（另有一条指向旧账号 `creatjy/` 的历史记录，属 GitHub 改名后的残留，不影响安装） |
 | 详情页 | ✅ 200 —— `https://awesome-dsh-plugin.com/p/createjy/dsh-plugin-update-entry/` |
-| 官方 Discover 索引 | ⏳ `officialCatalog.entry` 仍为 `null` —— 它只收带 npm 版本号的条目。`1.0.2` 是 2026-11-17T23:32Z 发上 npm 的，而当时最新的目录构建是 `2026.1117.22685`（2026-11-17T06:09Z），下一次构建后才会出现 |
 
 **先不要重复提交上架申请**——条目已经在目录里，再提交一份会变成两条重复记录。
+
+索引里的版本号靠目录重建来追：`1.0.3` 是 2026-11-19T06:21Z 发上 npm 的，`1.0.2` 之后的构建才会收录它。想确认「目录是否已跟上」，看下面命令的 `officialCatalog.entry.versions[0].version` 是不是你刚发的版本，而不是看 `stage`。
 
 复查命令（每次都看这一条的输出，别靠印象）：
 
@@ -128,7 +130,7 @@ rc.5 对客户端是**零改动**：它的 `@deepseek-ai/dsh-client-ui-plugin-ma
 node ~/.dsh/lazy-toolbox/skills/dsh-plugin-open-source/scripts/check-listing.mjs createjy/dsh-plugin-update-entry --json --timeout 25000
 ```
 
-判定口径（按脚本自己的状态机读，别凭感觉）：`entryFile.status` 还是 404 → `stage: not-submitted`，说明改名 PR 未合；变成 200 但 `officialCatalog.entry` 与 `awesomeJson.entry` 都还是 `null` → `stage: pending-build`，说明已合但目录没重建（通常一天内）；任一 `entry` 非空 → `stage: listed`，此时再确认 `page.status` 为 200。
+判定口径（按脚本自己的状态机读，别凭感觉）：`entryFile.status` 还是 404 → `stage: not-submitted`，说明条目文件没合；变成 200 但 `officialCatalog.entry` 还是 `null` → `stage: pending-build`，说明已合但目录没重建（通常一天内）；任一 `entry` 非空 → `stage: listed`，此时再确认 `page.status` 为 200。脚本里 `awesomeJson` / `dshMarket` 两项走的是 `awesome-dsh-plugin.com/plugins.json` 与 `dsh.market/plugins.json` 两个大文件，本机上常会因为文件过大而 `超时（>25s）`——那两项超时只说明这台机器没拉完，不说明市场里没有，可直接 `curl` 复核。
 
 ## 边界与取舍
 
