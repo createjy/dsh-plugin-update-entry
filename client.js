@@ -41,7 +41,7 @@
    * Pure helpers (also exported for `node --test`, see `__pure` below)
    * ------------------------------------------------------------------ */
 
-  const BUILD = '1.0.2';
+  const BUILD = '1.0.3';
 
   /* Read a cordis service by its registration name, without the ctx proxy guard.
    *

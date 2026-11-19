@@ -174,6 +174,24 @@ test('dom: 0.2.2-rc.2 class prefixes still mount the entry', { skip: noJsdom || 
 });
 
 /**
+ * DSH 0.2.2-rc.5 brought the `w6M7KW_` prefix back, and it renders the status
+ * badge with a second hash token in front (`_tag_brmue_4 w6M7KW_statusTag`).
+ * The plugin matches `[class*="statusTag"]`, so both spellings must mount.
+ */
+test('dom: 0.2.2-rc.5 class prefixes still mount the entry', { skip: noJsdom || noCordis }, () => {
+  const output = run('harness-real.mjs', {
+    PUE_PREFIX: 'w6M7KW_',
+    PUE_BADGE_CLASS: '_tag_brmue_4 w6M7KW_statusTag',
+  });
+  assert.match(output, /0 prefix w6M7KW_/);
+  assert.match(output, /1 button 更新 beforeSwitch true/);
+  assert.match(output, /2 rows \[ '0\.2\.100/);
+  assert.match(output, /5 afterLeave false/);
+  assert.match(output, /7 update .*已更新到 0\.2\.100/);
+  assert.match(output, /\["updateBundle","dsh-mcp-connector","0\.2\.100"\]/);
+});
+
+/**
  * The gateway transport (`connection.rpc.call`) is the tier that works even
  * when the namespace service is not mounted in this fiber. Its `args` must be
  * ONE plain object keyed by parameter name — an array is refused by the Host

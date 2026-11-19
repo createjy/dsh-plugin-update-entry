@@ -18,6 +18,7 @@ const accepts = (version) => semver.satisfies(version, manifest.engines.dsh, { i
 test('engines.dsh accepts the DSH builds this plugin supports', () => {
   assert.equal(accepts('0.2.2-rc.1'), true, 'the desktop build the plugin was verified on');
   assert.equal(accepts('0.2.2-rc.2'), true, 'the next desktop build, verified against its packages');
+  assert.equal(accepts('0.2.2-rc.5'), true, 'the build the plugin was re-verified on');
   assert.equal(accepts('0.2.3'), true, 'later patches of the same minor line');
 });
 
