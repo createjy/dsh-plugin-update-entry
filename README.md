@@ -2,6 +2,10 @@
 
 一个 DeepSeek Harness 插件：把「更新」放回你每天真正会点的地方——插件卡片上、开关之前；多个包要更新时，在工具栏的同一个面板里勾选、批量更新，并且看得见每一项装到哪一步、花了多久。
 
+![一键更新：工具栏上的整批入口，逐项计时、可勾选](docs/images/bulk.png)
+
+单个插件时入口就在卡片上（下图）；一次要更新好几个时，工具栏上是同一套东西的整批形态：
+
 ![插件卡片上的更新入口，右侧是版本选择与悬停说明](docs/images/hero.png)
 
 它已经上架插件市场，在「插件市场 → 发现」里搜 `dsh-plugin-update-entry` 即可找到：
@@ -128,6 +132,8 @@ https://github.com/createjy/dsh-plugin-update-entry/releases/download/v1.0.5/dsh
 rc.3 把 `updatable` 改成了 `update`，只保留旧判断会让一键更新面板把所有包过滤掉、误报「全部插件已是最新版本」。`updatableBundles()` 同时读两种形状（新字段优先、旧字段回退），`test/pure.test.mjs` 各有一条用例。
 
 rc.5 对客户端是**零改动**：它的 `@deepseek-ai/dsh-client-ui-plugin-manager` 客户端 bundle 与 rc.3 逐字节相同（只差 `sourceMappingURL` 注释行），`listBundles` 的字段集合、CSS 前缀与远端参数也一致——`w6M7KW_` 是 rc.5 自己回来的。因此 1.0.2 不用改一行代码就能在 rc.5 上跑，`engines.dsh` 的 `^0.2.2-rc.1` 范围用 `includePrerelease` 已覆盖 rc.1–rc.5 与 0.2.2/0.2.3。
+
+**0.2.2-rc.5 实机复核（2026-11-21，插件 1.0.5）**：`window.__PUE_BUILD__ = 1.0.5`、`__DSH_BOOT__.release.version = 0.2.2-rc.5`；插件页 34 张卡片、工具栏按钮在位；一键更新面板 6 行、每行都有勾选框（`boxes 6`）；取消勾选一行的瞬间按钮从「更新 6 个」变成「更新 5 个」、页脚出现「1 个未勾选」；页脚同时显示「装上之后这里会显示实际耗时」（还没有耗时样本时的预期时长文案）。即 rc.3 起的三套新能力（rc.5 字段形状、勾选、计时/ETA）在 rc.5 上都成立，不需要按版本分支。
 
 类名前缀是构建产物，随时可能再变；`test/dom.test.mjs` 会带两套前缀各跑一遍卡片渲染，改名时不会静默失效。
 
