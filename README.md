@@ -1,6 +1,6 @@
 # 插件更新入口 · dsh-plugin-update-entry
 
-一个 DeepSeek Harness 插件：把「更新」放回你每天真正会点的地方——插件卡片上、开关之前。
+一个 DeepSeek Harness 插件：把「更新」放回你每天真正会点的地方——插件卡片上、开关之前；多个包要更新时，在工具栏的同一个面板里勾选、批量更新，并且看得见每一项装到哪一步、花了多久。
 
 ![插件卡片上的更新入口，右侧是版本选择与悬停说明](docs/images/hero.png)
 
@@ -10,7 +10,9 @@
 
 > **English.** A DSH plugin that puts an update control immediately before each plugin card's
 > switch, with a version picker that mirrors the detail page and per-version release notes on
-> hover. Same data and same Host operation as the official page — just where the hand already is.
+> hover. A toolbar panel updates a chosen subset of plugins in one run, ticking each row with the
+> time it took. Same data and same Host operation as the official page — just where the hand
+> already is.
 
 ---
 
@@ -22,7 +24,7 @@
 
 它**不改动**官方页面的任何逻辑，也不接管更新流程——调用的仍是 Host 自己的 `pluginManager/updateBundle`，所以检查、移除、安装、失败回滚全部沿用官方实现。
 
-## 四个能力
+## 六个能力
 
 ### 1 · 更新入口在开关之前
 
@@ -51,7 +53,6 @@
 
 官方在工具栏显示「N 个插件可更新」时，紧挨着它会出现「一键更新」。点开是一份**全部可更新插件**的清单（数据来自 `pluginManager/listBundles`，与官方刷新同源），每个插件一行：
 
-- 每行最左边有一个勾选框，默认全勾：只更新你要的那几个包。取消勾选的行不参与本次更新，行内会划掉并标「未勾选，已跳过」，底部按钮的数字随之变化；「全选 / 全不选」一个点击就能清空或恢复。
 - 左边是包名与已安装版本，右边是本次要更新的目标版本；中间有 `→` 表示目标高于当前版本。
 - 展开任意一行可以换版本——规则与单个插件完全相同：只列更新的版本，不可安装的行变灰说明原因，默认选中第一个可安装版本。
 - 版本行同样支持悬停看该版本在 GitHub 上的更新说明，读不到时降级为版本元数据。
@@ -60,6 +61,18 @@
 - 版本读取失败或还没回来的行显示「重试」而不是「正在检查更新」，并且**不会让底部按钮失效**——点「更新 N 个」时会先补读这些行，读完仍拿不到才跳过。这条是必须的：把「没读到」当成「没有更新」正是真实的更新看起来"没被检测到"的原因。
 
 点「更新 N 个」后**按列表顺序逐个更新**，一次只有一个插件在动，面板里逐行显示进度与结果，底部汇总「x 个已更新，y 个失败 · z 个已跳过」。被跳过的行会在汇总里点名，不会凭空消失。
+
+面板跟随工具栏按钮定位：右对齐、超出视口时贴边、下方空间不足翻到上方；运行中点击面板外部不会关闭面板，避免唯一的进度视图消失。
+
+### 5 · 部分更新：只勾你要的那几个
+
+![勾选想更新的插件，未勾选的行划掉并在页脚计数](docs/images/panel.png)
+
+- 每行最左边有一个勾选框，默认全勾：只更新你要的那几个包。取消勾选的行不参与本次更新，行内会划掉并标「未勾选，已跳过」，底部按钮的数字随之变化；「全选 / 全不选」一个点击就能清空或恢复。
+- 页脚实时给出「N 个未勾选 · 更新 M 个」，M 是本次真正会被更新的数量；全部取消勾选时按钮变灰。
+- 未勾选的行在结果面板里标「未勾选，已跳过」，汇总里单独计数，不会被算成失败。
+
+### 6 · 慢要看得见：计时、停止、预期时长
 
 安装阶段的慢是宿主的：每次更新都在 `profile/package.json` 的写锁里跑一遍 pnpm 全量重解析，实测一次 3–6 分钟，而且抢锁超过两分钟就报 `atomic-write: timed out waiting for the writer lock`。所以这里做了三件事：
 
@@ -71,8 +84,6 @@
 运行中可以「停止」。已经发给 Host 的那一次安装无法撤回——它持有 `package.json` 的独占锁，必须跑完——所以停止的真实含义是「这一个装完就不再开始下一个」。界面按这个事实说：点下停止后按钮变灰并显示「正在停止」，进度文案变成「正在停止，等 <包名> 装完就停」，不再是一个点了没有任何变化的死按钮。
 
 一次运行结束后再点工具栏上的「一键更新」是**重新检测**，不需要先点一次关掉结果面板：面板直接回到读取状态并重新取版本；结果面板里也有「重新读取」，只刷新列表、不动任何包。
-
-面板跟随工具栏按钮定位：右对齐、超出视口时贴边、下方空间不足翻到上方；运行中点击面板外部不会关闭面板，避免唯一的进度视图消失。
 
 ### 更新过程
 
@@ -163,6 +174,18 @@ node ~/.dsh/lazy-toolbox/skills/dsh-plugin-open-source/scripts/check-listing.mjs
 - 版本检查会为每个候选版本向 registry 查一次元数据，所以**只在点开时查询**，不做预取、不在页面加载时批量查询。结果缓存 10 分钟。
 
 ## 实现说明
+
+### 代码长什么样
+
+![代码图谱：21 个社区与枢纽函数](docs/images/graph.svg)
+
+426 个节点、688 条边、21 个社区。代码用 graphify 做静态 AST 抽取（确定性、不经过 LLM），README 与 `docs/` 里的需求／PRD 走语义抽取，两边合并成同一张图。最大的社区就是「面板与卡片挂载」（57 个节点）；连接度最高的三个函数是 `apply()`（89）、`el()`（21）、`renderBulk()`（17）——和这个插件的形状一致：一个工厂函数、一个自建的 DOM 构造器、一套面板渲染。
+
+图由 `graphify` 生成，可交互版本在仓库的 `graphify-out/graph.html`（本地打开即可，不需要服务器）；`graphify-out/GRAPH_REPORT.md` 是同一份图的审计报告。生成命令：
+
+```
+graphify /Users/openclaw/Documents/plugins/plugin-update-entry --update
+```
 
 ### 为什么是 DOM 注入
 

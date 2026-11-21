@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="540" viewBox="0 0 1180 540" role="img" aria-label="dsh-plugin-update-entry 代码图谱：21 个社区与枢纽函数">
+<rect width="1180" height="540" fill="#ffffff"/>
+<text x="32" y="42" font-family="-apple-system,Segoe UI,Helvetica,Arial" font-size="19" font-weight="600" fill="#1b1f2a">dsh-plugin-update-entry · 代码图谱</text>
+<text x="32" y="66" font-family="-apple-system,Segoe UI,Helvetica,Arial" font-size="12.5" fill="#6b7280">426 个节点 · 688 条边 · 21 个社区 · 由 graphify 从 22 个代码文件静态抽取（AST）+ README／PRD／需求文档语义抽取</text>
+<line x1="32" y1="82" x2="1148" y2="82" stroke="#e5e7eb"/>
+<text x="32" y="112" font-family="-apple-system,Segoe UI,Helvetica,Arial" font-size="12" font-weight="600" fill="#6b7280">社区（按节点数）</text>
+<rect x="32" y="123" width="250" height="13" rx="3" fill="#f3f4f6"/>
+<rect x="32" y="123" width="250" height="13" rx="3" fill="#4d6bfe" fill-opacity="0.80"/>
+<text x="294" y="134" font-family="-apple-system,Segoe UI,Helvetica,Arial" font-size="12" fill="#1b1f2a">Bulk panel &amp; card mounting</text>
+<text x="512" y="134" font-family="-apple-system,Segoe UI,Helvetica,Arial" font-size="11.5" fill="#6b7280">57 · 内聚 0.11</text>
+<rect x="32" y="153" width="250" height="13" rx="3" fill="#f3f4f6"/>
+<rect x="32" y="153" width="158" height="13" rx="3" fill="#4d6bfe" fill-opacity="0.60"/>
+<text x="294" y="164" font-family="-apple-system,Segoe UI,Helvetica,Arial" font-size="12" fill="#1b1f2a">Package manifest</text>
+<text x="512" y="164" font-family="-apple-system,Segoe UI,Helvetica,Arial" font-size="11.5" fill="#6b7280">36 · 内聚 0.06</text>
+<rect x="32" y="183" width="250" height="13" rx="3" fill="#f3f4f6"/>
+<rect x="32" y="183" width="132" height="13" rx="3" fill="#4d6bfe" fill-opacity="0.54"/>
+<text x="294" y="194" font-family="-apple-system,Segoe UI,Helvetica,Arial" font-size="12" fill="#1b1f2a">harness-bulk regression</text>
+<text x="512" y="194" font-family="-apple-system,Segoe UI,Helvetica,Arial" font-size="11.5" fill="#6b7280">30 · 内聚 0.07</text>
+<rect x="32" y="213" width="250" height="13" rx="3" fill="#f3f4f6"/>
+<rect x="32" y="213" width="132" height="13" rx="3" fill="#4d6bfe" fill-opacity="0.54"/>
+<text x="294" y="224" font-family="-apple-system,Segoe UI,Helvetica,Arial" font-size="12" fill="#1b1f2a">Test runner &amp; deps</text>
+<text x="512" y="224" font-family="-apple-system,Segoe UI,Helvetica,Arial" font-size="11.5" fill="#6b7280">30 · 内聚 0.08</text>
+<rect x="32" y="243" width="250" height="13" rx="3" fill="#f3f4f6"/>
+<rect x="32" y="243" width="118" height="13" rx="3" fill="#4d6bfe" fill-opacity="0.51"/>
+<text x="294" y="254" font-family="-apple-system,Segoe UI,Helvetica,Arial" font-size="12" fill="#1b1f2a">harness-bulk-stop regression</text>
+<text x="512" y="254" font-family="-apple-system,Segoe UI,Helvetica,Arial" font-size="11.5" fill="#6b7280">27 · 内聚 0.08</text>
+<rect x="32" y="273" width="250" height="13" rx="3" fill="#f3f4f6"/>
+<rect x="32" y="273" width="118" height="13" rx="3" fill="#4d6bfe" fill-opacity="0.51"/>
+<text x="294" y="284" font-family="-apple-system,Segoe UI,Helvetica,Arial" font-size="12" fill="#1b1f2a">Bulk panel rendering core</text>
+<text x="512" y="284" font-family="-apple-system,Segoe UI,Helvetica,Arial" font-size="11.5" fill="#6b7280">27 · 内聚 0.13</text>
+<rect x="32" y="303" width="250" height="13" rx="3" fill="#f3f4f6"/>
+<rect x="32" y="303" width="105" height="13" rx="3" fill="#4d6bfe" fill-opacity="0.48"/>
+<text x="294" y="314" font-family="-apple-system,Segoe UI,Helvetica,Arial" font-size="12" fill="#1b1f2a">Release workflow</text>
+<text x="512" y="314" font-family="-apple-system,Segoe UI,Helvetica,Arial" font-size="11.5" fill="#6b7280">24 · 内聚 0.08</text>
+<rect x="32" y="333" width="250" height="13" rx="3" fill="#f3f4f6"/>
+<rect x="32" y="333" width="105" height="13" rx="3" fill="#4d6bfe" fill-opacity="0.48"/>
+<text x="294" y="344" font-family="-apple-system,Segoe UI,Helvetica,Arial" font-size="12" fill="#1b1f2a">Notes bubble &amp; list rows</text>
+<text x="512" y="344" font-family="-apple-system,Segoe UI,Helvetica,Arial" font-size="11.5" fill="#6b7280">24 · 内聚 0.14</text>
+<rect x="32" y="363" width="250" height="13" rx="3" fill="#f3f4f6"/>
+<rect x="32" y="363" width="101" height="13" rx="3" fill="#4d6bfe" fill-opacity="0.47"/>
+<text x="294" y="374" font-family="-apple-system,Segoe UI,Helvetica,Arial" font-size="12" fill="#1b1f2a">harness-bulk-speed regression</text>
+<text x="512" y="374" font-family="-apple-system,Segoe UI,Helvetica,Arial" font-size="11.5" fill="#6b7280">23 · 内聚 0.09</text>
+<rect x="32" y="393" width="250" height="13" rx="3" fill="#f3f4f6"/>
+<rect x="32" y="393" width="88" height="13" rx="3" fill="#4d6bfe" fill-opacity="0.44"/>
+<text x="294" y="404" font-family="-apple-system,Segoe UI,Helvetica,Arial" font-size="12" fill="#1b1f2a">Requirements &amp; PRD docs</text>
+<text x="512" y="404" font-family="-apple-system,Segoe UI,Helvetica,Arial" font-size="11.5" fill="#6b7280">20 · 内聚 0.11</text>
+<rect x="32" y="423" width="250" height="13" rx="3" fill="#f3f4f6"/>
+<rect x="32" y="423" width="83" height="13" rx="3" fill="#4d6bfe" fill-opacity="0.43"/>
+<text x="294" y="434" font-family="-apple-system,Segoe UI,Helvetica,Arial" font-size="12" fill="#1b1f2a">harness-bulk-retry regression</text>
+<text x="512" y="434" font-family="-apple-system,Segoe UI,Helvetica,Arial" font-size="11.5" fill="#6b7280">19 · 内聚 0.11</text>
+<rect x="32" y="453" width="250" height="13" rx="3" fill="#f3f4f6"/>
+<rect x="32" y="453" width="83" height="13" rx="3" fill="#4d6bfe" fill-opacity="0.43"/>
+<text x="294" y="464" font-family="-apple-system,Segoe UI,Helvetica,Arial" font-size="12" fill="#1b1f2a">harness-bulk-gate regression</text>
+<text x="512" y="464" font-family="-apple-system,Segoe UI,Helvetica,Arial" font-size="11.5" fill="#6b7280">19 · 内聚 0.11</text>
+<text x="800" y="112" font-family="-apple-system,Segoe UI,Helvetica,Arial" font-size="12" font-weight="600" fill="#6b7280">枢纽函数（按连接度）</text>
+<text x="800" y="138" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12.5" fill="#1b1f2a">apply()</text>
+<rect x="952" y="128" width="120" height="12" rx="3" fill="#4d6bfe" fill-opacity="0.75"/>
+<text x="1080" y="138" font-family="-apple-system,Segoe UI,Helvetica,Arial" font-size="11.5" fill="#6b7280">89</text>
+<text x="800" y="168" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12.5" fill="#1b1f2a">el()</text>
+<rect x="952" y="158" width="120" height="12" rx="3" fill="#4d6bfe" fill-opacity="0.75"/>
+<text x="1080" y="168" font-family="-apple-system,Segoe UI,Helvetica,Arial" font-size="11.5" fill="#6b7280">21</text>
+<text x="800" y="198" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12.5" fill="#1b1f2a">renderBulk()</text>
+<rect x="952" y="188" width="119" height="12" rx="3" fill="#4d6bfe" fill-opacity="0.75"/>
+<text x="1079" y="198" font-family="-apple-system,Segoe UI,Helvetica,Arial" font-size="11.5" fill="#6b7280">17</text>
+<text x="800" y="228" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12.5" fill="#1b1f2a">runBulk()</text>
+<rect x="952" y="218" width="119" height="12" rx="3" fill="#4d6bfe" fill-opacity="0.75"/>
+<text x="1079" y="228" font-family="-apple-system,Segoe UI,Helvetica,Arial" font-size="11.5" fill="#6b7280">17</text>
+<text x="800" y="258" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12.5" fill="#1b1f2a">loadBulk()</text>
+<rect x="952" y="248" width="98" height="12" rx="3" fill="#4d6bfe" fill-opacity="0.75"/>
+<text x="1058" y="258" font-family="-apple-system,Segoe UI,Helvetica,Arial" font-size="11.5" fill="#6b7280">14</text>
+<text x="800" y="288" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12.5" fill="#1b1f2a">bulkFootNodes()</text>
+<rect x="952" y="278" width="91" height="12" rx="3" fill="#4d6bfe" fill-opacity="0.75"/>
+<text x="1051" y="288" font-family="-apple-system,Segoe UI,Helvetica,Arial" font-size="11.5" fill="#6b7280">13</text>
+<text x="800" y="318" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12.5" fill="#1b1f2a">jsdom</text>
+<rect x="952" y="308" width="84" height="12" rx="3" fill="#4d6bfe" fill-opacity="0.75"/>
+<text x="1044" y="318" font-family="-apple-system,Segoe UI,Helvetica,Arial" font-size="11.5" fill="#6b7280">12</text>
+<text x="800" y="348" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12.5" fill="#1b1f2a">closePopover()</text>
+<rect x="952" y="338" width="77" height="12" rx="3" fill="#4d6bfe" fill-opacity="0.75"/>
+<text x="1037" y="348" font-family="-apple-system,Segoe UI,Helvetica,Arial" font-size="11.5" fill="#6b7280">11</text>
+<text x="800" y="378" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12.5" fill="#1b1f2a">render()</text>
+<rect x="952" y="368" width="77" height="12" rx="3" fill="#4d6bfe" fill-opacity="0.75"/>
+<text x="1037" y="378" font-family="-apple-system,Segoe UI,Helvetica,Arial" font-size="11.5" fill="#6b7280">11</text>
+<line x1="32" y1="494" x2="1148" y2="494" stroke="#e5e7eb"/>
+<text x="32" y="516" font-family="-apple-system,Segoe UI,Helvetica,Arial" font-size="11.5" fill="#6b7280">代码 22 个文件走 AST（确定性，无 LLM）；README / docs/PRD-parallel-update.md / docs/REQUIREMENTS.md 走语义抽取。在线可交互版本见仓库 graphify-out/graph.html。</text>
+</svg>

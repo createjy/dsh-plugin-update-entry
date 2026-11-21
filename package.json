@@ -1,7 +1,7 @@
 {
   "name": "dsh-plugin-update-entry",
   "version": "1.0.5",
-  "description": "Update entry before each DSH plugin card switch: pick a version and read its release notes without opening the detail page.",
+  "description": "Update entry before each DSH plugin card switch: pick a version and read its release notes, or update a chosen subset of plugins from one toolbar panel with live timing.",
   "type": "module",
   "main": "index.js",
   "exports": {
