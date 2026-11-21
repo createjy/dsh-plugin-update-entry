@@ -8,9 +8,6 @@
 
 ![插件卡片上的更新入口，右侧是版本选择与悬停说明](docs/images/hero.png)
 
-它已经上架插件市场，在「插件市场 → 发现」里搜 `dsh-plugin-update-entry` 即可找到：
-
-![插件市场里的 dsh-plugin-update-entry](docs/images/market.png)
 
 > **English.** A DSH plugin that puts an update control immediately before each plugin card's
 > switch, with a version picker that mirrors the detail page and per-version release notes on
@@ -118,48 +115,8 @@ https://github.com/createjy/dsh-plugin-update-entry/releases/download/v1.0.5/dsh
 
 **要求**：DSH 桌面端或 Web 端（Client 侧插件）。插件本身没有 Host 逻辑，不需要重启后端。
 
-**兼容版本**：`engines.dsh = ^0.2.2-rc.1`（等价 `>=0.2.2-rc.1 <0.3.0`）。已在 0.2.2-rc.1（桌面端实机）、0.2.2-rc.2、0.2.2-rc.3、0.2.2-rc.5（桌面端实机）上核对过下面几个依赖面：
-
-| 依赖面 | 0.2.2-rc.1 | 0.2.2-rc.2 | 0.2.2-rc.3 | 0.2.2-rc.5 |
-| --- | --- | --- | --- | --- |
-| 卡片锚点 `data-plugin-package` / `cardEnd` / `bundleToggle` / `statusTag` | ✅ | ✅ 全部保留 | ✅ 全部保留 | ✅ 全部保留 |
-| CSS module 类名前缀 | `w6M7KW_` | `X_2TxG_`（插件只匹配子串，不受影响） | 相同策略 | **回到 `w6M7KW_`**（同样只匹配子串） |
-| `listVersions` / `updateBundle` 的远端参数 | `(name, options)` / `(name, version, options)` | 相同 | 相同 | 相同 |
-| `listBundles` 的「可更新」字段 | `updatable: true` | `updatable: true` | **`update: 'registry' \| 'git'`**（不可更新则无字段） | 同 rc.3 |
-| 模块加载契约 `__ModuleLoader__.load({ id, factory })` | ✅ | ✅ | ✅ | ✅ |
-| 网关方法面 | `listBundles` / `listPlugins` / `listVersions` / `updateBundle` / `installBundle` / `removeBundle` / `registries` | 相同 | 相同 | 相同（仍**没有**批量更新接口：`updateBundles` / `updateAll` / `checkVersions` 都是 404） |
-
-rc.3 把 `updatable` 改成了 `update`，只保留旧判断会让一键更新面板把所有包过滤掉、误报「全部插件已是最新版本」。`updatableBundles()` 同时读两种形状（新字段优先、旧字段回退），`test/pure.test.mjs` 各有一条用例。
-
-rc.5 对客户端是**零改动**：它的 `@deepseek-ai/dsh-client-ui-plugin-manager` 客户端 bundle 与 rc.3 逐字节相同（只差 `sourceMappingURL` 注释行），`listBundles` 的字段集合、CSS 前缀与远端参数也一致——`w6M7KW_` 是 rc.5 自己回来的。因此 1.0.2 不用改一行代码就能在 rc.5 上跑，`engines.dsh` 的 `^0.2.2-rc.1` 范围用 `includePrerelease` 已覆盖 rc.1–rc.5 与 0.2.2/0.2.3。
-
-**0.2.2-rc.5 实机复核（2026-11-21，插件 1.0.5）**：`window.__PUE_BUILD__ = 1.0.5`、`__DSH_BOOT__.release.version = 0.2.2-rc.5`；插件页 34 张卡片、工具栏按钮在位；一键更新面板 6 行、每行都有勾选框（`boxes 6`）；取消勾选一行的瞬间按钮从「更新 6 个」变成「更新 5 个」、页脚出现「1 个未勾选」；页脚同时显示「装上之后这里会显示实际耗时」（还没有耗时样本时的预期时长文案）。即 rc.3 起的三套新能力（rc.5 字段形状、勾选、计时/ETA）在 rc.5 上都成立，不需要按版本分支。
-
-类名前缀是构建产物，随时可能再变；`test/dom.test.mjs` 会带两套前缀各跑一遍卡片渲染，改名时不会静默失效。
-
-## 市场收录状态
-
-截至 **2026-11-19**，本插件已进入三处目录。同一次复查的输出：
-
-| 检查项 | 结果 |
-| --- | --- |
-| GitHub 仓库 topic | ✅ `topics` 含 `dsh-plugin`（`hasDshPluginTopic: true`） |
-| 目录条目（`registry entry`） | ✅ `data/plugins/createjy__dsh-plugin-update-entry.yml` 返回 200 |
-| 官方 Discover 索引 | ✅ 已收录 —— `dsh-plugin-catalog/index.json` 里 `name: dsh-plugin-update-entry`，`title: createjy/dsh-plugin-update-entry`，`category: ui`，`versions[0] = 1.0.2`（`source: npm`，`engines.dsh: ^0.2.2-rc.1`） |
-| `dsh.market` 独立扫描 | ✅ 有 `createjy/dsh-plugin-update-entry`（另有一条指向旧账号 `creatjy/` 的历史记录，属 GitHub 改名后的残留，不影响安装） |
-| 详情页 | ✅ 200 —— `https://awesome-dsh-plugin.com/p/createjy/dsh-plugin-update-entry/` |
-
-**先不要重复提交上架申请**——条目已经在目录里，再提交一份会变成两条重复记录。
-
-索引里的版本号靠目录重建来追：`1.0.5` 是 2026-11-19 发上 npm 的，之后的目录构建才会收录它。想确认「目录是否已跟上」，看下面命令的 `officialCatalog.entry.versions[0].version` 是不是你刚发的版本，而不是看 `stage`。
-
-复查命令（每次都看这一条的输出，别靠印象）：
-
-```
-node ~/.dsh/lazy-toolbox/skills/dsh-plugin-open-source/scripts/check-listing.mjs createjy/dsh-plugin-update-entry --json --timeout 25000
-```
-
-判定口径（按脚本自己的状态机读，别凭感觉）：`entryFile.status` 还是 404 → `stage: not-submitted`，说明条目文件没合；变成 200 但 `officialCatalog.entry` 还是 `null` → `stage: pending-build`，说明已合但目录没重建（通常一天内）；任一 `entry` 非空 → `stage: listed`，此时再确认 `page.status` 为 200。脚本里 `awesomeJson` / `dshMarket` 两项走的是 `awesome-dsh-plugin.com/plugins.json` 与 `dsh.market/plugins.json` 两个大文件，本机上常会因为文件过大而 `超时（>25s）`——那两项超时只说明这台机器没拉完，不说明市场里没有，可直接 `curl` 复核。
+**兼容版本**：`engines.dsh = ^0.2.2-rc.1`（`>=0.2.2-rc.1 <0.3.0`，`includePrerelease`）。rc.1 / rc.3 / rc.5 都在桌面端实机跑过，rc.5 是零改动适配（它的官方客户端 bundle 与 rc.3 只差 `sourceMappingURL`）。
+rc.3 起 `listBundles` 用 `update: 'registry' | 'git'` 取代 `updatable: true`，插件同时读两种形状；官方 CSS module 前缀是构建产物（rc.2 是 `X_2TxG_`，rc.5 回到 `w6M7KW_`），插件只匹配类名子串。
 
 ## 边界与取舍
 
@@ -185,13 +142,7 @@ node ~/.dsh/lazy-toolbox/skills/dsh-plugin-open-source/scripts/check-listing.mjs
 
 ![代码图谱：21 个社区与枢纽函数](docs/images/graph.svg)
 
-426 个节点、688 条边、21 个社区。代码用 graphify 做静态 AST 抽取（确定性、不经过 LLM），README 与 `docs/` 里的需求／PRD 走语义抽取，两边合并成同一张图。最大的社区就是「面板与卡片挂载」（57 个节点）；连接度最高的三个函数是 `apply()`（89）、`el()`（21）、`renderBulk()`（17）——和这个插件的形状一致：一个工厂函数、一个自建的 DOM 构造器、一套面板渲染。
-
-图由 `graphify` 生成，可交互版本在仓库的 `graphify-out/graph.html`（本地打开即可，不需要服务器）；`graphify-out/GRAPH_REPORT.md` 是同一份图的审计报告。生成命令：
-
-```
-graphify /Users/openclaw/Documents/plugins/plugin-update-entry --update
-```
+代码走静态 AST、文档走语义抽取，合成一张图；连接度最高的是 `apply()`、`el()`、`renderBulk()`。
 
 ### 为什么是 DOM 注入
 
@@ -211,23 +162,15 @@ graphify /Users/openclaw/Documents/plugins/plugin-update-entry --update
 
 ### 传输层：三级降级
 
-DSH 的 Client 插件要调 Host 服务，常规写法是声明 `inject: ['remote.pluginManager']`。但那样会让整个模块等待命名空间挂载——命名空间没就绪时，按钮根本不会出现。这里改成按需解析，并留了三级降级：
+Client 插件调 Host 服务的常规写法是 `inject: ['remote.pluginManager']`，但那会让整个模块等命名空间挂载——没就绪时按钮根本不出现。这里改成按需解析并留了三级降级：
 
-| 层 | 方式 | 用途 |
-| --- | --- | --- |
-| ① service | `ctx.get('remote.pluginManager')` | 命名空间已挂载时最直接 |
-| ② rpc | `connection.rpc.call('/api', 'pluginManager/<method>', { args })` | 拿得到连接、拿不到服务时 |
-| ③ fetch | `POST /api/pluginManager/<method>` | 两者都拿不到时，直接走同源 RPC |
+| 层 | 方式 |
+| --- | --- |
+| ① service | `ctx.get('remote.pluginManager')` |
+| ② rpc | `connection.rpc.call('/api', 'pluginManager/<method>', { args })` |
+| ③ fetch | `POST /api/pluginManager/<method>` |
 
-`args` 必须是**按参数名索引的普通对象**（`{ name, options }`），不是数组——网关按 `descriptor.parameters` 的 wire 名组装参数，数组会被拒绝。
-
-读操作任何一层失败都可以换下一层；**写操作不行**。`updateBundle` 只在错误能证明「请求根本没发出去」时才降级重试，否则可能把一次更新下发两遍。这条判断在 `viaTiers(..., { mutating: true })` 里。
-
-### 为什么整个文件包在函数里
-
-Host 把每个 batch 的所有 Client 模块**拼成一个 classic script**下发。如果 boot graph 里出现两行指向同一个 bundle（包改名后旧行残留在 Host 内存里就会这样），这些字节会在同一个脚本里出现两次——同一个 `const` 声明两次是**解析错误**，整个 9 MB 的 batch 一行都不会执行，排在我们后面的包全部装不上。改名的代价不该由别人的插件来付。
-
-所以文件用 `;(function () { ... })();` 包起来，每份副本各自一个作用域；注册失败只在错误是「本包 id 的 `duplicate factory registration`」时吞掉（同一份字节的第二次执行不携带任何新信息），其它错误照常抛出。HMR 的 `invalidate()` 会先删掉 factory，热替换后照常重新注册，不受影响。
+`args` 必须是按参数名索引的普通对象（`{ name, options }`），不是数组——网关按 `descriptor.parameters` 的 wire 名组装参数。读操作任一层失败都能换下一层；写操作只在错误能证明「请求没发出去」时才重试，否则可能把一次更新下发两遍。
 
 ### 依赖与权限
 
@@ -237,52 +180,6 @@ Host 把每个 batch 的所有 Client 模块**拼成一个 classic script**下�
 - 请求只有两处，都由你触发：registry 的版本元数据（经 Host 的 `listVersions`）和 GitHub Releases（悬停时）。
 
 不收集、不上报任何使用数据。版本说明在 `sessionStorage` 里缓存 20 分钟（关掉标签页即失效），`localStorage` 只用于调试开关。
-
-## 开发
-
-```
-client.js             Client 模块：扫描、注入、浮层、版本与说明、更新流程
-index.js              Host 侧空实现（组合包需要一个 Host 入口）
-cordis.patch.yml      组合包声明
-locale/{zh,en}.json   显示元数据
-test/pure.test.mjs    纯函数（版本解析、仓库解析、结局映射、错误清洗…）
-test/engines.test.mjs engines.dsh 的 semver 边界
-test/dom.test.mjs     DOM 回归入口
-test/harness/         jsdom harness：服务层 / connection.rpc / 仅 fetch / 重复嵌入 / 一键更新 / 版本检查失败恢复 / 列表过滤与补读 / 无提示节点 / 勾选与停止
-```
-
-```sh
-npm install     # 只装 devDependencies：jsdom + @deepseek-ai/cordis + semver
-npm test        # 23 条纯函数 + 13 条 DOM/脚本回归 + 2 条 engines 边界
-```
-
-`npm test` 不需要 DSH 在跑。十三条 DOM 回归分别在 jsdom 里还原官方卡片与工具栏结构，覆盖插件在浏览器里可能遇到的传输形态：
-
-| harness | 上下文 | 证明什么 |
-| --- | --- | --- |
-| `harness-real.mjs` | 真实 cordis，`remote.pluginManager` 命名空间已挂载 | 按钮在开关前、版本列表、悬停说明、确认后调用 `updateBundle` |
-| `harness-transport.mjs` | 只有 `connection.rpc.call` | 降级到网关 RPC，且 `args` 是按参数名索引的对象 |
-| `harness-fetch.mjs` | 所有服务都读不到，只剩 `fetch` | `POST /api/pluginManager/<method>` 单独就能撑起完整流程 |
-| `harness-duplicate.mjs` | `node:vm`，一个脚本里放两份本 bundle | 重复嵌入不再是解析错误，本包只注册一次，别的包照常注册，无关的重复仍然抛错 |
-| `harness-bulk.mjs` | jsdom，工具栏 note + 可更新清单 | 按钮挂在 note 之后、清单覆盖全部可更新包、换版本只影响该项、后台版本检查重建列表时悬停气泡仍在、顺序执行并汇总 |
-| `harness-bulk-retry.mjs` | jsdom，版本检查连续失败两次 | 失败下标成「重试」而不是「正在检查更新」；展开会重新查询（与卡片一致）；行内的「重试」能恢复并进入更新流程 |
-| `harness-bulk-filters.mjs` | jsdom，注册表返回空版本 / 版本读取失败 | 空版本的行被隐藏而不是标「已是最新版本」；读取失败的行不阻断「更新 N 个」，运行时先补读、仍失败才记为已跳过并汇总 |
-| `harness-bulk-nonote.mjs` | jsdom，工具栏里没有官方提示节点 | 一键更新按钮照常挂在工具栏（官方刷新期间提示节点会消失几分钟）；按钮上的数字等于实际可见行数；提示节点回来时按钮排到它后面且不会重复；离开插件页时按钮与面板一起移除 |
-| `harness-bulk-gate.mjs` | jsdom，`managementAvailable: false` | 先问 `pluginInventory/list` 再读列表；无可用 profile 时显示只读提示与「重新读取」，一个 `listBundles` 都不发；翻转后同一次重试能正常列出 |
-| `harness-bulk-speed.mjs` | jsdom，5 个包、版本读取首轮全失败、安装各 1.2 s、其中一个首次抢锁超时 | 补读确实 4 路并发（`peakReads 4`）；运行中行内与页脚都有计时；跑完每行保留耗时；抢锁超时的那一个在队列排空后重试并成功；页脚给出「约 5 × 1s」 |
-| `harness-bulk-stop.mjs` | jsdom，勾选部分行 + `updateBundle` 被卡住 | 取消勾选的行不参与更新且被点名；「全不选」让按钮变灰为零；点停止后底部立刻变成「正在停止」且按钮变灰；已发出的那一个照常跑完，其余标「已停止，未更新」；跑完再点工具栏按钮会重新读一次列表而不是只关面板 |
-
-单独跑某一条：`node test/harness/harness-fetch.mjs`。缺 devDependencies 时这些会跳过，纯函数照跑。
-
-调试：`localStorage.pueDebug = '1'` 后重新打开浮层，头部会显示构建号，失败信息里会附带每一层的解析结果与原始错误。
-
-### 发版
-
-推 `v*` tag 即由 `.github/workflows/release.yml` 发布到 npm，走 **Trusted Publishing（OIDC）**：工作流只申请 `id-token: write`，npm 用 GitHub 签发的短期 OIDC token 换发布凭据，仓库里不需要也不应该放 `NPM_TOKEN`。账号开了 2FA 也能这么发，并且会自动带 provenance 证明。
-
-```
-git tag v1.0.5 && git push origin v1.0.5
-```
 
 ## 许可
 
